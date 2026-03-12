@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/favicon.png">
+</head>
+<body>
+
+<div class="topbar">
+
+<button id="menuToggle">☰</button>
+
+<h1>Changeover Monitoring System</h1>
+
+<div class="topbar-right">
+
+<span class="welcome-text">
+Welcome, User
+</span>
+
+<a href="/" class="logout-btn">
+Logout
+</a>
+
+</div>
+
+</div>
+
+<div id="overlay"></div>
+
+<div class="sidebar" id="sidebar">
+    <h2>Changeover</h2>
+    <ul>
+        <li><a href="/dashboard">Dashboard</a></li>
+        <li><a href="/new-changeover">New Changeover</a></li>
+        <li><a href="/past-changeovers">Past Changeovers</a></li>
+        <li><a href="/reports">Reports</a></li>
+        <li><a href="/pending-analysis">
+        Post Changeover Analysis
+        <span class="notification"><%= pendingCount %></span></a></li>
+    </ul>
+</div>
+
+<div class="main-content">
+    <% if(problems.length > 0){ %>
+
+    <h2 style="color:#d32f2f;">⚠ Problem Changeovers</h2>
+
+    <% problems.forEach(co => { %>
+
+    <div class="card" style="border-left:6px solid #d32f2f;">
+
+    <h4><%= co.from_style %> → <%= co.to_style %></h4>
+
+    <p>Setup Time: <%= co.final_minutes %> min</p>
+    <p>Bucket Loss: <%= co.bucket_loss %> pcs</p>
+    <p>Ramp-Up: <%= co.ramp_up_days %> days</p>
+
+    </div>
+
+    <% }) %>
+
+    <% } %>
+
+<!-- KPI CARDS -->
+
+<div class="cards">
+
+<div class="card">
+
+<h3>🏭 Changeover Performance</h3>
+
+<p style="font-size:22px;font-weight:600;">
+<%= performanceStatus %>
+</p>
+
+<p>Avg Setup: <%= avgSetup %> min</p>
+<p>Avg Loss: <%= avgBucket %> pcs</p>
+
+</div>
+
+<div class="card">
+<h3>📦 Total Changeovers</h3>
+<p><%= total %></p>
+</div>
+
+<div class="card">
+<h3>⏱ Avg Changeover Time</h3>
+<p><%= avgSetup %> min</p>
+</div>
+
+<div class="card">
+<h3>📉 Avg Bucket Loss</h3>
+<p><%= avgBucket %> pcs</p>
+</div>
+
+<div class="card">
+<h3>🏆 Best Changeover</h3>
+<p><%= bestCO %> min</p>
+</div>
+
+<div class="card">
+<h3>⚠ Worst Changeover</h3>
+<p><%= worstCO %> min</p>
+</div>
+
+<div class="card">
+<h3>Highest Loss Style</h3>
+<p><%= topLossStyle %></p>
+<p style="color:red;"><%= topLossValue %> pcs</p>
+</div>
+
+</div>
+
+<!-- PLANNED -->
+
+<h2 style="margin-top:40px;">Planned Changeovers</h2>
+
+<% planned.forEach(co => { %>
+
+<div class="card">
+
+<h4><%= co.from_style %> → <%= co.to_style %></h4>
+
+<p>Line: <%= co.line %></p>
+<p>Readiness: <%= co.readiness%>%</p>
+<div style="background:#eee;height:8px;border-radius:5px;">
+<div style="width:<%= co.readiness %>%;background:#4caf50;height:8px;border-radius:5px;"></div>
+</div>
+
+<a href="/readiness-checklist/<%= co.id %>">
+<button>Open Readiness Checklist</button>
+</a>
+
+</div>
+
+<% }) %>
+
+
+<!-- ACTIVE -->
+
+<h2 style="margin-top:40px;">Active Changeovers</h2>
+
+<% active.forEach(co => { %>
+
+<div class="card active-card">
+
+<h4><%= co.from_style %> → <%= co.to_style %></h4>
+
+<p>Line: <%= co.line %></p>
+<p>Status: 
+<span class="status <%= co.status %>">
+<%= co.status %>
+</span>
+</p>
+
+<form action="/stop/<%= co.id %>" method="POST">
+<button type="submit">Stop Changeover</button>
+</form>
+
+</div>
+
+<% }) %>
+
+
+<!-- RECENT -->
+
+<h2 style="margin-top:40px;">Recent Changeovers</h2>
+
+<% closed.forEach(co => { %>
+
+<div class="card">
+
+<h4><%= co.from_style %> → <%= co.to_style %></h4>
+
+<p>Line: <%= co.line %></p>
+<p>Duration: <%= co.final_minutes %> min</p>
+<p>Bucket Loss: <%= co.bucket_loss %></p>
+<p>Ramp-Up: <%= co.ramp_up_days %> days</p>
+<p>Status:
+<span class="status-badge"><%= co.ramp_status %></span>
+</p>
+
+<form action="/delete/<%= co.id %>" method="POST">
+<button style="background:red;color:white;">Delete</button>
+</form>
+</div>
+
+<% }) %>
+
+</div>
+
+
+<script src="/js/sidebar.js"></script>
+
+</body>
+</html>

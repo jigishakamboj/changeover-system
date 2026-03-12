@@ -1,4 +1,4 @@
-const db = require('./database/database');
+const db = require('./database');
 const express = require('express');
 const path = require('path');
 
@@ -558,4 +558,5 @@ res.redirect('/readiness-checklist/'+id);
 
 app.listen(PORT,()=>{
 console.log(`Server running on http://localhost:${PORT}`);
+
 });

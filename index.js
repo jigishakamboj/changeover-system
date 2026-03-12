@@ -1,4 +1,4 @@
-const db = require('./database');
+const db = require('./database.js');
 const express = require('express');
 const path = require('path');
 
@@ -560,3 +560,4 @@ app.listen(PORT,()=>{
 console.log(`Server running on http://localhost:${PORT}`);
 
 });
+

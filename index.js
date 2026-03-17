@@ -8,15 +8,16 @@ const PORT = process.env.PORT || 3000;
 const USERNAME = "admin";
 const PASSWORD = "1234";
 
-// Middleware
+// =====================
+// MIDDLEWARE
+// =====================
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// View engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Static folder
 app.use(express.static(path.join(__dirname, 'public')));
 
 // =====================
@@ -25,12 +26,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use((req, res, next) => {
 
-db.get(
-`SELECT COUNT(*) AS count
- FROM changeovers
- WHERE status='closed'
- AND (ramp_up_days IS NULL OR ramp_up_days = '')`,
-(err,row)=>{
+db.get(`
+SELECT COUNT(*) AS count
+FROM changeovers
+WHERE status='closed'
+AND (ramp_up_days IS NULL OR ramp_up_days = '')
+`, (err,row)=>{
 
 if(err){
 console.log(err);
@@ -49,7 +50,7 @@ next();
 // LOGIN
 // =====================
 
-app.get('/', (req, res) => {
+app.get('/', (req,res)=>{
 res.render('login');
 });
 
@@ -58,15 +59,9 @@ app.post('/login',(req,res)=>{
 const {username,password} = req.body;
 
 if(username === USERNAME && password === PASSWORD){
-
 res.redirect('/dashboard');
-
 }else{
-
-res.render('login',{
-error:"Invalid username or password"
-});
-
+res.render('login',{ error:"Invalid username or password"});
 }
 
 });
@@ -75,7 +70,7 @@ error:"Invalid username or password"
 // NEW CHANGEOVER PAGE
 // =====================
 
-app.get('/new-changeover', (req, res) => {
+app.get('/new-changeover',(req,res)=>{
 res.render('new-changeover');
 });
 
@@ -83,13 +78,16 @@ res.render('new-changeover');
 // SAVE NEW CHANGEOVER
 // =====================
 
-app.post('/new-changeover', (req, res) => {
+app.post('/new-changeover',(req,res)=>{
 
 const {date,line,from_style,to_style,deduction_minutes} = req.body;
 
-db.get(
-"SELECT COUNT(*) as count FROM changeovers",
-(err,row)=>{
+db.get("SELECT COUNT(*) as count FROM changeovers",(err,row)=>{
+
+if(err){
+console.log(err);
+return res.redirect('/dashboard');
+}
 
 const nextId = row.count + 1;
 const changeoverId = "CO" + String(nextId).padStart(2,"0");
@@ -106,9 +104,16 @@ line,
 from_style,
 to_style,
 deduction_minutes
-]);
+],
+(err)=>{
+
+if(err){
+console.log(err);
+}
 
 res.redirect('/dashboard');
+
+});
 
 });
 
@@ -133,9 +138,7 @@ const planned = rows.filter(r=>r.status==='planned');
 const active = rows.filter(r=>r.status==='in_progress');
 const closed = rows.filter(r=>r.status==='closed');
 
-// =====================
 // READINESS SCORE
-// =====================
 
 planned.forEach(co=>{
 
@@ -162,9 +165,7 @@ co.readiness = Math.round((completed/totalChecks)*100);
 
 });
 
-// =====================
 // RAMP STATUS
-// =====================
 
 closed.forEach(co=>{
 
@@ -183,45 +184,37 @@ co.ramp_status="-";
 
 });
 
-// =====================
 // AVERAGES
-// =====================
 
 const avgSetup =
 closed.length>0
-?Math.round(
-closed.reduce((s,c)=>s+(c.final_minutes||0),0)
-/closed.length)
+?Math.round(closed.reduce((s,c)=>s+(c.final_minutes||0),0)/closed.length)
 :0;
 
 const avgBucket =
 closed.length>0
-?Math.round(
-closed.reduce((s,c)=>s+(c.bucket_loss||0),0)
-/closed.length)
+?Math.round(closed.reduce((s,c)=>s+(c.bucket_loss||0),0)/closed.length)
 :0;
 
-let performanceStatus = "No Data";
+// PERFORMANCE STATUS
 
-if(closed.length > 0){
+let performanceStatus="No Data";
 
-if(avgSetup <= 40 && avgBucket <= 150){
-performanceStatus = "🟢 GOOD";
+if(closed.length>0){
+
+if(avgSetup<=40 && avgBucket<=150){
+performanceStatus="🟢 GOOD";
 }
-
-else if(avgSetup <= 60){
-performanceStatus = "🟡 AVERAGE";
+else if(avgSetup<=60){
+performanceStatus="🟡 AVERAGE";
 }
-
 else{
-performanceStatus = "🔴 NEEDS IMPROVEMENT";
+performanceStatus="🔴 NEEDS IMPROVEMENT";
 }
 
 }
 
-// =====================
 // TOP LOSS STYLE
-// =====================
 
 let topLossStyle="-";
 let topLossValue=0;
@@ -237,32 +230,24 @@ topLossValue = worstLoss.bucket_loss||0;
 
 }
 
-// =====================
 // PROBLEM CHANGEOVERS
-// =====================
 
 const problems = closed.filter(c =>
 (c.final_minutes && c.final_minutes > avgSetup*1.5) ||
 (c.bucket_loss && c.bucket_loss > avgBucket*1.5)
 );
 
-// =====================
-// BEST / WORST SETUP
-// =====================
+// BEST / WORST
 
 let bestCO=0;
 let worstCO=0;
 
 if(closed.length>0){
-
 bestCO = Math.min(...closed.map(c=>c.final_minutes||0));
 worstCO = Math.max(...closed.map(c=>c.final_minutes||0));
-
 }
 
-// =====================
-// RENDER DASHBOARD
-// =====================
+// RENDER
 
 res.render('dashboard',{
 planned,
@@ -291,9 +276,11 @@ app.get('/past-changeovers',(req,res)=>{
 
 db.all("SELECT * FROM changeovers ORDER BY id DESC",(err,rows)=>{
 
-res.render('past-changeovers',{
-changeovers:rows
-});
+if(err){
+console.log(err);
+}
+
+res.render('past-changeovers',{ changeovers:rows });
 
 });
 
@@ -313,9 +300,16 @@ UPDATE changeovers
 SET status='in_progress',
 start_time=?
 WHERE id=?`,
-[startTime,id]);
+[startTime,id],
+(err)=>{
+
+if(err){
+console.log(err);
+}
 
 res.redirect(`/active-changeover/${id}`);
+
+});
 
 });
 
@@ -333,7 +327,7 @@ db.get(
 [id],
 (err,row)=>{
 
-if(!row || !row.start_time){
+if(err || !row || !row.start_time){
 return res.redirect('/dashboard');
 }
 
@@ -350,9 +344,16 @@ end_time=?,
 duration_minutes=?,
 final_minutes=?
 WHERE id=?`,
-[endTime,duration,final,id]);
+[endTime,duration,final,id],
+(err)=>{
+
+if(err){
+console.log(err);
+}
 
 res.redirect(`/post-changeover/${id}`);
+
+});
 
 });
 
@@ -371,9 +372,11 @@ db.get(
 [id],
 (err,row)=>{
 
-res.render('active-changeover',{
-changeover:row
-});
+if(err){
+console.log(err);
+}
+
+res.render('active-changeover',{ changeover:row });
 
 });
 
@@ -392,9 +395,11 @@ db.get(
 [id],
 (err,row)=>{
 
-res.render('post-changeover',{
-changeover:row
-});
+if(err){
+console.log(err);
+}
+
+res.render('post-changeover',{ changeover:row });
 
 });
 
@@ -415,9 +420,16 @@ SET ramp_up_days=?,
 bucket_loss=?,
 major_delay=?
 WHERE id=?`,
-[ramp_up_days,bucket_loss,major_delay,id]);
+[ramp_up_days,bucket_loss,major_delay,id],
+(err)=>{
+
+if(err){
+console.log(err);
+}
 
 res.redirect('/dashboard');
+
+});
 
 });
 
@@ -429,9 +441,15 @@ app.post('/delete/:id',(req,res)=>{
 
 const id=req.params.id;
 
-db.run("DELETE FROM changeovers WHERE id=?",[id]);
+db.run("DELETE FROM changeovers WHERE id=?",[id],(err)=>{
+
+if(err){
+console.log(err);
+}
 
 res.redirect('/dashboard');
+
+});
 
 });
 
@@ -445,9 +463,11 @@ db.all(
 "SELECT * FROM changeovers WHERE status='closed'",
 (err,rows)=>{
 
-res.render('reports',{
-changeovers:rows
-});
+if(err){
+console.log(err);
+}
+
+res.render('reports',{ changeovers:rows });
 
 });
 
@@ -459,10 +479,11 @@ changeovers:rows
 
 app.get('/pending-analysis',(req,res)=>{
 
-db.all(
-`SELECT * FROM changeovers
- WHERE status='closed'
- AND (ramp_up_days IS NULL OR ramp_up_days = '')`,
+db.all(`
+SELECT * FROM changeovers
+WHERE status='closed'
+AND (ramp_up_days IS NULL OR ramp_up_days='')
+`,
 (err,rows)=>{
 
 if(err){
@@ -470,14 +491,11 @@ console.log(err);
 return res.redirect('/dashboard');
 }
 
-res.render('pending-analysis',{
-changeovers:rows
-});
+res.render('pending-analysis',{ changeovers:rows });
 
 });
 
 });
-
 
 // =====================
 // READINESS CHECKLIST
@@ -492,9 +510,7 @@ db.get(
 [id],
 (err,row)=>{
 
-res.render('readiness-checklist',{
-changeover:row
-});
+res.render('readiness-checklist',{ changeover:row });
 
 });
 
@@ -546,9 +562,16 @@ d.operators_ready?1:0,
 d.workstation_ready?1:0,
 d.line_balance_ready?1:0,
 id
-]);
+],
+(err)=>{
+
+if(err){
+console.log(err);
+}
 
 res.redirect('/readiness-checklist/'+id);
+
+});
 
 });
 
@@ -558,7 +581,4 @@ res.redirect('/readiness-checklist/'+id);
 
 app.listen(PORT,()=>{
 console.log(`Server running on http://localhost:${PORT}`);
-
 });
-
-

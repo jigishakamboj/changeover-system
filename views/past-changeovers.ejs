@@ -80,6 +80,13 @@ Logout
                     <td><%= co.final_minutes %></td>
                     <td><%= co.bucket_loss %></td>
                     <td><%= co.status %></td>
+
+                    <td>
+                    <a href="/edit-changeover/<%= co.id %>">
+                    <button>Edit</button>
+                    </a>
+                    </td>
+
                 </tr>
 
             <% }) %>

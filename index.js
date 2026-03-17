@@ -75,6 +75,31 @@ res.render('new-changeover');
 });
 
 // =====================
+// EDIT CHANGEOVER PAGE
+// =====================
+
+app.get('/edit-changeover/:id',(req,res)=>{
+
+const id = req.params.id;
+
+db.get(
+"SELECT * FROM changeovers WHERE id=?",
+[id],
+(err,row)=>{
+
+if(err || !row){
+return res.redirect('/dashboard');
+}
+
+res.render('new-changeover',{
+changeover:row
+});
+
+});
+
+});
+
+// =====================
 // SAVE NEW CHANGEOVER
 // =====================
 
@@ -114,6 +139,51 @@ console.log(err);
 res.redirect('/dashboard');
 
 });
+
+});
+
+});
+
+// =====================
+// UPDATE CHANGEOVER
+// =====================
+
+app.post('/update-changeover/:id',(req,res)=>{
+
+const id = req.params.id;
+
+const {
+date,
+line,
+from_style,
+to_style,
+deduction_minutes
+} = req.body;
+
+db.run(`
+UPDATE changeovers
+SET date=?,
+line=?,
+from_style=?,
+to_style=?,
+deduction_minutes=?
+WHERE id=?
+`,
+[
+date,
+line,
+from_style,
+to_style,
+deduction_minutes,
+id
+],
+(err)=>{
+
+if(err){
+console.log(err);
+}
+
+res.redirect('/dashboard');
 
 });
 

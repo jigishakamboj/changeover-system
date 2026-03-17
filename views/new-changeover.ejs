@@ -52,7 +52,7 @@ Logout
 
 <h2>Plan New Changeover</h2>
 
-<form action="/new-changeover" method="POST">
+<form action="<%= changeover ? '/update-changeover/' + changeover.id : '/new-changeover' %>" method="POST">
 
 <h3 style="margin-top:30px;">Basic Information</h3>
 

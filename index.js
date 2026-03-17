@@ -71,7 +71,7 @@ res.render('login',{ error:"Invalid username or password"});
 // =====================
 
 app.get('/new-changeover',(req,res)=>{
-res.render('new-changeover');
+res.render('new-changeover')',{changeover: null});
 });
 
 // =====================

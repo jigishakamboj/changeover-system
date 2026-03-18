@@ -1,14 +1,14 @@
-CO ID,Date,Line,From Style no.,Product type,To Style no.,Product type,Last good piece of previous stye (T1),First good piece of ongoing stye (T4),Total changeover loss,Loss duration (min),Shift/ break deduction,Final minutes,Ramp up days,Bucket loss,Status,Major delay causes
-CO01,02-01-2026,01-Feb,3772/698,women's top,59MYGQ03C,Kid's top,11:56,14:05,02:09:00,129,0,129,1,73,closed,Trim unavailability therefore selable output was completed on next day i.e. 03/01 instead of 02/01
-CO02,06-01-2026,01-Feb,59MYGQ03C,Kid's top,AN-DRC-05,Women's dress,14:32,16:27,01:55:00,115,0,115,1,127,closed,
-CO03,08-01-2026,01-Feb,AN-DRC-05,Women's dress,346269,women's top,16:48,19:53,03:05:00,185,0,185,2,728,closed,"Low output, required rearranging the line "
-CO04,16-01-2026,01-Feb,346269,women's top,727783,women's top,22:23,09:30,11:07:00,667,480,187,3,472,closed,"no changeover delays, low output because of feeding issues"
-CO05,27-01-2026,01-Feb,727783,women's top,144760,Women's dress,21:53,09:23,11:30:00,690,480,210,4,885,closed,NA
-CO06,02-02-2026,01-Feb,144760,Women's dress,4YCF5V02J,Women's dress,22:22,09:09,10:47:00,647,480,167,0,107,closed,NA
-CO07,05-02-2026,01-Feb,4YCF5V02J,Women's dress,380500,Women's bottom,22:18,08:33,10:15:00,615,480,135,2,340,closed,
-CO08,13-02-2026,01-Feb,380500,Women's bottom,78712,Kid's dress,15:15,17:45,02:30:00,150,0,150,1,676,closed,
-CO09,16-02-2026,01-Feb,78712,Kid's dress,346492,Women's shirt,14:10,16:30,02:20:00,140,0,140,1,233,closed,
-CO10,19-02-2026,01-Feb,346492,Women's shirt,1377/107,Women's bottom,12:40,16:00,03:20:00,200,30,170,2,657,closed,
-CO11,21-02-2026,01-Feb,1377107/107,Women's bottom,346422,Women's top,11:55,15:04,03:09:00,189,30,159,,,closed,
+CO ID,Date,Line,Style no.,Product type,Style no.,Product type,Last good piece of previous stye (T1),First good piece of ongoing stye (T4),Total changeover loss,Loss duration (min),Shift/ break deduction,Final minutes,Ramp up days,Bucket loss,Status,Major delay causes
+CO01,02/01/26,1/2,3772/698,women's top,59MYGQ03C,Kid's top,11:56,14:05,2:09:00,129,0,129,1,73,closed,Trim unavailability therefore selable output was completed on next day i.e. 03/01 instead of 02/01
+CO02,06/01/26,1/2,59MYGQ03C,Kid's top,AN-DRC-05,Women's dress,14:32,16:27,1:55:00,115,0,115,1,127,closed,
+CO03,08/01/26,1/2,AN-DRC-05,Women's dress,346269,women's top,16:48,19:53,3:05:00,185,0,185,2,728,closed,"Low output, required rearranging the line "
+CO04,16/01/26,1/2,346269,women's top,727783,women's top,22:23,09:30,11:07:00,667,480,187,3,472,closed,"no changeover delays, low output because of feeding issues"
+CO05,27/01/26,1/2,727783,women's top,144760,Women's dress,21:53,09:23,11:30:00,690,480,210,4,885,closed,NA
+CO06,02/02/26,1/2,144760,Women's dress,4YCF5V02J,Women's dress,22:22,09:09,10:47:00,647,480,167,0,107,closed,NA
+CO07,05/02/26,1/2,4YCF5V02J,Women's dress,380500,Women's bottom,22:18,08:33,10:15:00,615,480,135,2,340,closed,
+CO08,13/02/26,1/2,380500,Women's bottom,78712,Kid's dress,15:15,17:45,02:30:00,150,0,150,1,676,closed,
+CO09,16/02/26,1/2,78712,Kid's dress,346492,Women's shirt,14:10,16:30,02:20:00,140,0,140,1,233,closed,
+CO10,19/02/26,1/2,346492,Women's shirt,1377/107,Women's bottom,12:40,16:00,03:20:00,200,30,170,2,657,closed,
+CO11,21/02/26,1/2,1377107/107,Women's bottom,346422,Women's top,11:55,15:04,03:09:00,189,30,159,,,closed,
 ,,,,,,,,,,,,,,,,
 ,,,,,,,,,,Average CO time,,159,,,,

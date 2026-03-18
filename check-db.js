@@ -1,13 +1,17 @@
-const db = require('./database/database');
+const sqlite3 = require('sqlite3').verbose();
 
-db.all("PRAGMA table_info(changeovers);", (err, rows) => {
+const db = new sqlite3.Database('./database/changeovers.db');
 
-if(err){
-console.log(err);
-return;
-}
+console.log("Using DB file at:", './database/changeovers.db');
 
-console.log("TABLE STRUCTURE:");
-console.log(rows);
+db.all("SELECT * FROM changeovers", (err, rows) => {
+
+    if (err) {
+        console.error(err);
+        return;
+    }
+
+    console.log("ALL CHANGEOVERS:");
+    console.log(rows);
 
 });

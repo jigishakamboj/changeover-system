@@ -1,5 +1,5 @@
 CO ID,Date,Line,From Style no.,Product type,To Style no.,Product type,Last good piece of previous stye (T1),First good piece of ongoing stye (T4),Total changeover loss,Loss duration (min),Shift/ break deduction,Final minutes,Ramp up days,Bucket loss,Status,Major delay causes
-CO01,02-01-2026,01/02,3772/698,women's top,59MYGQ03C,Kid's top,11:56,14:05,02:09:00,129,0,129,1,73,closed,Trim unavailability therefore selable output was completed on next day i.e. 03/01 instead of 02/01
+CO01,02-01-2026,01-Feb,3772/698,women's top,59MYGQ03C,Kid's top,11:56,14:05,02:09:00,129,0,129,1,73,closed,Trim unavailability therefore selable output was completed on next day i.e. 03/01 instead of 02/01
 CO02,06-01-2026,01-Feb,59MYGQ03C,Kid's top,AN-DRC-05,Women's dress,14:32,16:27,01:55:00,115,0,115,1,127,closed,
 CO03,08-01-2026,01-Feb,AN-DRC-05,Women's dress,346269,women's top,16:48,19:53,03:05:00,185,0,185,2,728,closed,"Low output, required rearranging the line "
 CO04,16-01-2026,01-Feb,346269,women's top,727783,women's top,22:23,09:30,11:07:00,667,480,187,3,472,closed,"no changeover delays, low output because of feeding issues"

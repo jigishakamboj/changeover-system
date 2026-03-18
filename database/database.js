@@ -1,8 +1,9 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// Create database file in project root
-const dbPath = path.join(__dirname, 'changeovers.db');
+// IMPORTANT: Use stable absolute path for deployment
+const dbPath = path.join(process.cwd(), 'database', 'changeovers.db');
+
 console.log("Using DB file at:", dbPath);
 
 const db = new sqlite3.Database(dbPath, (err) => {
@@ -39,28 +40,29 @@ db.serialize(() => {
     // READINESS CHECKLIST FIELDS
     // =========================
 
-    db.run(`ALTER TABLE changeovers ADD COLUMN fabric_ready INTEGER DEFAULT 0`, ()=>{});
-    db.run(`ALTER TABLE changeovers ADD COLUMN panels_ready INTEGER DEFAULT 0`, ()=>{});
-    db.run(`ALTER TABLE changeovers ADD COLUMN thread_ready INTEGER DEFAULT 0`, ()=>{});
-    db.run(`ALTER TABLE changeovers ADD COLUMN trims_ready INTEGER DEFAULT 0`, ()=>{});
-    db.run(`ALTER TABLE changeovers ADD COLUMN labels_ready INTEGER DEFAULT 0`, ()=>{});
+    const columns = [
+        "fabric_ready",
+        "panels_ready",
+        "thread_ready",
+        "trims_ready",
+        "labels_ready",
+        "attachments_ready",
+        "needle_ready",
+        "presser_ready",
+        "bobbins_ready",
+        "techpack_ready",
+        "operation_ready",
+        "sample_ready",
+        "quality_ready",
+        "operators_ready",
+        "workstation_ready",
+        "line_balance_ready"
+    ];
 
-    db.run(`ALTER TABLE changeovers ADD COLUMN attachments_ready INTEGER DEFAULT 0`, ()=>{});
-    db.run(`ALTER TABLE changeovers ADD COLUMN needle_ready INTEGER DEFAULT 0`, ()=>{});
-    db.run(`ALTER TABLE changeovers ADD COLUMN presser_ready INTEGER DEFAULT 0`, ()=>{});
-    db.run(`ALTER TABLE changeovers ADD COLUMN bobbins_ready INTEGER DEFAULT 0`, ()=>{});
-
-    db.run(`ALTER TABLE changeovers ADD COLUMN techpack_ready INTEGER DEFAULT 0`, ()=>{});
-    db.run(`ALTER TABLE changeovers ADD COLUMN operation_ready INTEGER DEFAULT 0`, ()=>{});
-    db.run(`ALTER TABLE changeovers ADD COLUMN sample_ready INTEGER DEFAULT 0`, ()=>{});
-    db.run(`ALTER TABLE changeovers ADD COLUMN quality_ready INTEGER DEFAULT 0`, ()=>{});
-
-    db.run(`ALTER TABLE changeovers ADD COLUMN operators_ready INTEGER DEFAULT 0`, ()=>{});
-    db.run(`ALTER TABLE changeovers ADD COLUMN workstation_ready INTEGER DEFAULT 0`, ()=>{});
-    db.run(`ALTER TABLE changeovers ADD COLUMN line_balance_ready INTEGER DEFAULT 0`, ()=>{});
+    columns.forEach(col => {
+        db.run(`ALTER TABLE changeovers ADD COLUMN ${col} INTEGER DEFAULT 0`, () => {});
+    });
 
 });
 
 module.exports = db;
-
-

@@ -575,6 +575,12 @@ res.redirect('/readiness-checklist/'+id);
 
 });
 
+app.get('/clear-db', (req,res)=>{
+    db.run("DELETE FROM changeovers", ()=>{
+        res.send("Database cleared");
+    });
+});
+
 // =====================
 // SERVER
 // =====================

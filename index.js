@@ -303,7 +303,7 @@ res.render('reports',{ changeovers:rows });
 
 });
 
-app.get('/fix-line-final', (req, res) => {
+app.get('/test123', (req, res) => {
     db.all("SELECT id, line FROM changeovers", (err, rows) => {
 
         if(err){

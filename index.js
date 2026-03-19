@@ -137,6 +137,76 @@ res.redirect('/dashboard');
 });
 
 // =====================
+// EDIT CHANGEOVER PAGE
+// =====================
+
+app.get('/edit-changeover/:id',(req,res)=>{
+
+const id = req.params.id;
+
+db.get(
+"SELECT * FROM changeovers WHERE id=?",
+[id],
+(err,row)=>{
+
+if(err || !row){
+return res.redirect('/dashboard');
+}
+
+res.render('new-changeover',{
+changeover:row
+});
+
+});
+
+});
+
+// =====================
+// SAVE NEW CHANGEOVER
+// =====================
+
+app.post('/new-changeover',(req,res)=>{
+
+const {date,line,from_style,to_style,deduction_minutes} = req.body;
+
+db.get("SELECT COUNT(*) as count FROM changeovers",(err,row)=>{
+
+if(err){
+console.log(err);
+return res.redirect('/dashboard');
+}
+
+const nextId = row.count + 1;
+const changeoverId = "CO" + String(nextId).padStart(2,"0");
+
+db.run(`
+INSERT INTO changeovers
+(changeover_id,date,line,from_style,to_style,status,deduction_minutes)
+VALUES (?,?,?,?,?,'planned',?)
+`,
+[
+changeoverId,
+date,
+line,
+from_style,
+to_style,
+deduction_minutes
+],
+(err)=>{
+
+if(err){
+console.log(err);
+}
+
+res.redirect('/dashboard');
+
+});
+
+});
+
+});
+
+// =====================
 // DASHBOARD
 // =====================
 
@@ -286,6 +356,173 @@ res.render('past-changeovers',{ changeovers:rows });
 });
 
 // =====================
+// START CHANGEOVER
+// =====================
+
+app.post('/start/:id',(req,res)=>{
+
+const id=req.params.id;
+const startTime=new Date().toISOString();
+
+db.run(`
+UPDATE changeovers
+SET status='in_progress',
+start_time=?
+WHERE id=?`,
+[startTime,id],
+(err)=>{
+
+if(err){
+console.log(err);
+}
+
+res.redirect(`/active-changeover/${id}`);
+
+});
+
+});
+
+// =====================
+// STOP CHANGEOVER
+// =====================
+
+app.post('/stop/:id',(req,res)=>{
+
+const id=req.params.id;
+const endTime=new Date().toISOString();
+
+db.get(
+"SELECT start_time,deduction_minutes FROM changeovers WHERE id=?",
+[id],
+(err,row)=>{
+
+if(err || !row || !row.start_time){
+return res.redirect('/dashboard');
+}
+
+const start=new Date(row.start_time);
+const end=new Date(endTime);
+
+const duration=Math.floor((end-start)/60000);
+const final=duration-(row.deduction_minutes||0);
+
+db.run(`
+UPDATE changeovers
+SET status='closed',
+end_time=?,
+duration_minutes=?,
+final_minutes=?
+WHERE id=?`,
+[endTime,duration,final,id],
+(err)=>{
+
+if(err){
+console.log(err);
+}
+
+res.redirect(`/post-changeover/${id}`);
+
+});
+
+});
+
+});
+
+// =====================
+// ACTIVE PAGE
+// =====================
+
+app.get('/active-changeover/:id',(req,res)=>{
+
+const id=req.params.id;
+
+db.get(
+"SELECT * FROM changeovers WHERE id=?",
+[id],
+(err,row)=>{
+
+if(err){
+console.log(err);
+}
+
+res.render('active-changeover',{ changeover:row });
+
+});
+
+});
+
+// =====================
+// POST CHANGEOVER PAGE
+// =====================
+
+app.get('/post-changeover/:id',(req,res)=>{
+
+const id=req.params.id;
+
+db.get(
+"SELECT * FROM changeovers WHERE id=?",
+[id],
+(err,row)=>{
+
+if(err){
+console.log(err);
+}
+
+res.render('post-changeover',{ changeover:row });
+
+});
+
+});
+
+// =====================
+// SAVE POST ANALYSIS
+// =====================
+
+app.post('/post-changeover/:id',(req,res)=>{
+
+const id=req.params.id;
+const {ramp_up_days,bucket_loss,major_delay}=req.body;
+
+db.run(`
+UPDATE changeovers
+SET ramp_up_days=?,
+bucket_loss=?,
+major_delay=?
+WHERE id=?`,
+[ramp_up_days,bucket_loss,major_delay,id],
+(err)=>{
+
+if(err){
+console.log(err);
+}
+
+res.redirect('/dashboard');
+
+});
+
+});
+
+// =====================
+// DELETE
+// =====================
+
+app.post('/delete/:id',(req,res)=>{
+
+const id=req.params.id;
+
+db.run("DELETE FROM changeovers WHERE id=?",[id],(err)=>{
+
+if(err){
+console.log(err);
+}
+
+res.redirect('/dashboard');
+
+});
+
+});
+
+// =====================
 // REPORTS
 // =====================
 
@@ -345,6 +582,108 @@ app.get('/test123', (req, res) => {
 
         res.send("ALL LINES FIXED");
     });
+});
+
+// =====================
+// PENDING ANALYSIS
+// =====================
+
+app.get('/pending-analysis',(req,res)=>{
+
+db.all(`
+SELECT * FROM changeovers
+WHERE status='closed'
+AND (ramp_up_days IS NULL OR ramp_up_days='')
+`,
+(err,rows)=>{
+
+if(err){
+console.log(err);
+return res.redirect('/dashboard');
+}
+
+res.render('pending-analysis',{ changeovers:rows });
+
+});
+
+});
+
+// =====================
+// READINESS CHECKLIST
+// =====================
+
+app.get('/readiness-checklist/:id',(req,res)=>{
+
+const id=req.params.id;
+
+db.get(
+"SELECT * FROM changeovers WHERE id=?",
+[id],
+(err,row)=>{
+
+res.render('readiness-checklist',{ changeover:row });
+
+});
+
+});
+
+// =====================
+// SAVE READINESS
+// =====================
+
+app.post('/save-readiness/:id',(req,res)=>{
+
+const id=req.params.id;
+const d=req.body;
+
+db.run(`
+UPDATE changeovers SET
+fabric_ready=?,
+panels_ready=?,
+thread_ready=?,
+trims_ready=?,
+labels_ready=?,
+attachments_ready=?,
+needle_ready=?,
+presser_ready=?,
+bobbins_ready=?,
+techpack_ready=?,
+operation_ready=?,
+sample_ready=?,
+quality_ready=?,
+operators_ready=?,
+workstation_ready=?,
+line_balance_ready=?
+WHERE id=?`,
+[
+d.fabric_ready?1:0,
+d.panels_ready?1:0,
+d.thread_ready?1:0,
+d.trims_ready?1:0,
+d.labels_ready?1:0,
+d.attachments_ready?1:0,
+d.needle_ready?1:0,
+d.presser_ready?1:0,
+d.bobbins_ready?1:0,
+d.techpack_ready?1:0,
+d.operation_ready?1:0,
+d.sample_ready?1:0,
+d.quality_ready?1:0,
+d.operators_ready?1:0,
+d.workstation_ready?1:0,
+d.line_balance_ready?1:0,
+id
+],
+(err)=>{
+
+if(err){
+console.log(err);
+}
+
+res.redirect('/readiness-checklist/'+id);
+
+});
+
 });
 
 // =====================

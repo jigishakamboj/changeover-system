@@ -644,7 +644,15 @@ res.redirect('/readiness-checklist/'+id);
 });
 
 });
-
+app.get('/fix-line', (req,res)=>{
+    db.run(`
+        UPDATE changeovers
+        SET line = '1/2'
+        WHERE line LIKE '%-%'
+    `, ()=>{
+        res.send("Line fixed");
+    });
+});
 // =====================
 // SERVER
 // =====================

@@ -303,6 +303,50 @@ res.render('reports',{ changeovers:rows });
 
 });
 
+app.get('/fix-line-final', (req, res) => {
+    db.all("SELECT id, line FROM changeovers", (err, rows) => {
+
+        if(err){
+            console.log(err);
+            return res.send("Error");
+        }
+
+        rows.forEach(co => {
+
+            let line = co.line;
+
+            if(line && typeof line === "string" && line.includes("-")){
+
+                const parts = line.split("-");
+
+                if(parts.length === 2){
+                    const day = parseInt(parts[0]);
+
+                    const months = {
+                        Jan:1, Feb:2, Mar:3, Apr:4,
+                        May:5, Jun:6, Jul:7, Aug:8,
+                        Sep:9, Oct:10, Nov:11, Dec:12
+                    };
+
+                    const month = months[parts[1]];
+
+                    if(month){
+                        const fixed = `${day}/${month}`;
+
+                        db.run(
+                            "UPDATE changeovers SET line=? WHERE id=?",
+                            [fixed, co.id]
+                        );
+                    }
+                }
+            }
+
+        });
+
+        res.send("ALL LINES FIXED");
+    });
+});
+
 // =====================
 // SERVER
 // =====================

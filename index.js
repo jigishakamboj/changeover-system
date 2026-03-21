@@ -383,48 +383,73 @@ res.redirect(`/active-changeover/${id}`);
 });
 
 // =====================
-// STOP CHANGEOVER
+// STOP CHANGEOVER (FIXED)
 // =====================
 
-app.post('/stop/:id',(req,res)=>{
+app.post('/stop/:id', (req, res) => {
 
-const id=req.params.id;
-const endTime=new Date().toISOString();
+    console.log("➡️ STOP REQUEST RECEIVED");
 
-db.get(
-"SELECT start_time,deduction_minutes FROM changeovers WHERE id=?",
-[id],
-(err,row)=>{
+    const id = req.params.id;
+    const endTime = Date.now();
 
-if(err || !row || !row.start_time){
-return res.redirect('/dashboard');
-}
+    db.get(
+        "SELECT start_time, deduction_minutes FROM changeovers WHERE id=?",
+        [id],
+        (err, row) => {
 
-const start=new Date(row.start_time);
-const end=new Date(endTime);
+            if (err) {
+                console.log("❌ DB GET ERROR:", err);
+                return res.send("DB error");
+            }
 
-const duration=Math.floor((end-start)/60000);
-const final=duration-(row.deduction_minutes||0);
+            if (!row) {
+                console.log("❌ No row found");
+                return res.send("No data");
+            }
 
-db.run(`
-UPDATE changeovers
-SET status='closed',
-end_time=?,
-duration_minutes=?,
-final_minutes=?
-WHERE id=?`,
-[endTime,duration,final,id],
-(err)=>{
+            console.log("✅ Row fetched:", row);
 
-if(err){
-console.log(err);
-}
+            const startTime = new Date(row.start_time).getTime();
 
-res.redirect(`/post-changeover/${id}`);
+            if (isNaN(startTime)) {
+                console.log("❌ Invalid start time");
+                return res.send("Invalid start time");
+            }
 
-});
+            const durationMs = endTime - startTime;
+            const duration = Math.floor(durationMs / 60000);
 
-});
+            const deduction = row.deduction_minutes || 0;
+            const final = Math.max(0, duration - deduction);
+
+            const endISO = new Date(endTime).toISOString();
+
+            console.log("⏱ Duration:", duration);
+
+            db.run(
+                `UPDATE changeovers
+                 SET status='closed',
+                     end_time=?,
+                     duration_minutes=?,
+                     final_minutes=?
+                 WHERE id=?`,
+                [endISO, duration, final, id],
+                (err) => {
+
+                    if (err) {
+                        console.log("❌ DB UPDATE ERROR:", err);
+                        return res.send("Update error");
+                    }
+
+                    console.log("✅ Changeover stopped successfully");
+
+                    res.redirect(`/post-changeover/${id}`);
+                }
+            );
+
+        }
+    );
 
 });
 

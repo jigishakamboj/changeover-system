@@ -457,29 +457,34 @@ app.post('/stop/:id', (req, res) => {
 // ACTIVE PAGE
 // =====================
 
-app.get('/active-changeover/:id',(req,res)=>{
+app.get('/active-changeover/:id', (req, res) => {
 
-const id=req.params.id;
+    const id = req.params.id;
 
-db.get(
-"SELECT * FROM changeovers WHERE id=?",
-[id],
-(err,row)=>{
+    db.get(
+        "SELECT * FROM changeovers WHERE id=?",
+        [id],
+        (err, row) => {
 
-if (!row) {
-    console.log("No changeover found");
-    return res.redirect('/dashboard');
-}
+            if (err) {
+                console.log(err);
+                return res.redirect('/dashboard');
+            }
 
-if (!row.start_time) {
-    console.log("⚠️ Missing start_time - redirecting");
-    return res.redirect('/dashboard');
-    row.start_time = new Date().toISOString();
-}
+            if (!row) {
+                console.log("No changeover found");
+                return res.redirect('/dashboard');
+            }
 
-res.render('active-changeover', { changeover: row });
+            if (!row.start_time) {
+                console.log("⚠️ Missing start_time - redirecting");
+                return res.redirect('/dashboard');
+            }
 
-});
+            res.render('active-changeover', { changeover: row });
+
+        }
+    );
 
 });
 

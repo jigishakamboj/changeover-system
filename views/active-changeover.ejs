@@ -65,11 +65,16 @@ Stop Changeover
 <script>
 
 // ===============================
-// ✅ FIXED TIMER (STABLE VERSION)
+// FINAL STABLE TIMER (NO NaN EVER)
 // ===============================
 
-// Use timestamp (no string parsing issues)
-const startTime = <%= new Date(changeover.start_time).getTime() %>;
+let startTime = <%= new Date(changeover.start_time).getTime() %>;
+
+// ✅ IMPORTANT: handle invalid data
+if (isNaN(startTime)) {
+    console.log("⚠️ Invalid start_time:", "<%= changeover.start_time %>");
+    startTime = Date.now();
+}
 
 function updateTimer(){
 
@@ -86,20 +91,15 @@ function updateTimer(){
         String(seconds).padStart(2,'0');
 }
 
-// Run immediately (no delay)
 updateTimer();
 
-// Store interval
 const timerInterval = setInterval(updateTimer, 1000);
 
-// Cleanup to prevent long-session issues
 window.addEventListener("beforeunload", () => {
     clearInterval(timerInterval);
 });
 
 </script>
-
-<script src="/js/sidebar.js"></script>
 
 </body>
 </html>

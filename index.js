@@ -466,11 +466,12 @@ db.get(
 [id],
 (err,row)=>{
 
-if(err){
-console.log(err);
+if (!row || !row.start_time) {
+    console.log("⚠️ Missing start_time, fixing...");
+    row.start_time = new Date().toISOString();
 }
 
-res.render('active-changeover',{ changeover:row });
+res.render('active-changeover', { changeover: row });
 
 });
 
@@ -729,25 +730,6 @@ app.get('/fix-start-time', (req, res) => {
 
 });
 
-
-//can delete 33-48
-app.get('/fix-start-time', (req, res) => {
-
-    db.run(`
-        UPDATE changeovers
-        SET start_time = datetime('now')
-        WHERE start_time IS NULL OR start_time = ''
-    `, (err) => {
-
-        if(err){
-            console.log(err);
-            return res.send("Error fixing data");
-        }
-
-        res.send("Start times fixed!");
-    });
-
-});
 // =====================
 // SERVER
 // =====================

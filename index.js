@@ -711,6 +711,43 @@ res.redirect('/readiness-checklist/'+id);
 
 });
 
+app.get('/fix-start-time', (req, res) => {
+
+    db.run(`
+        UPDATE changeovers
+        SET start_time = datetime('now')
+        WHERE start_time IS NULL OR start_time = ''
+    `, (err) => {
+
+        if(err){
+            console.log(err);
+            return res.send("Error fixing data");
+        }
+
+        res.send("Start times fixed!");
+    });
+
+});
+
+
+//can delete 33-48
+app.get('/fix-start-time', (req, res) => {
+
+    db.run(`
+        UPDATE changeovers
+        SET start_time = datetime('now')
+        WHERE start_time IS NULL OR start_time = ''
+    `, (err) => {
+
+        if(err){
+            console.log(err);
+            return res.send("Error fixing data");
+        }
+
+        res.send("Start times fixed!");
+    });
+
+});
 // =====================
 // SERVER
 // =====================

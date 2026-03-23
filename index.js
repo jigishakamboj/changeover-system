@@ -359,26 +359,34 @@ res.render('past-changeovers',{ changeovers:rows });
 // START CHANGEOVER
 // =====================
 
-app.post('/start/:id',(req,res)=>{
+app.post('/start/:id', (req, res) => {
 
-const id=req.params.id;
-const startTime=new Date().toISOString();
+    const id = req.params.id;
+    const startTime = new Date().toISOString();
 
-db.run(`
-UPDATE changeovers
-SET status='in_progress',
-start_time=?
-WHERE id=?`,
-[startTime,id],
-(err)=>{
+    db.run(
+        `UPDATE changeovers
+         SET status='in_progress',
+             start_time=?
+         WHERE id=?`,
+        [startTime, id],
+        function(err) {
 
-if(err){
-console.log(err);
-}
+            if (err) {
+                console.log("❌ START ERROR:", err);
+                return res.redirect('/dashboard');
+            }
 
-res.redirect(`/active-changeover/${id}`);
+            if (this.changes === 0) {
+                console.log("❌ No rows updated");
+                return res.redirect('/dashboard');
+            }
 
-});
+            console.log("✅ Changeover started:", id, startTime);
+
+            res.redirect(`/active-changeover/${id}`);
+        }
+    );
 
 });
 
@@ -723,7 +731,7 @@ res.redirect('/readiness-checklist/'+id);
 
 });
 
-app.get('/fix-start-time', (req, res) => {
+app.get('/fix-db', (req, res) => {
 
     db.run(`
         UPDATE changeovers
@@ -731,12 +739,12 @@ app.get('/fix-start-time', (req, res) => {
         WHERE start_time IS NULL OR start_time = ''
     `, (err) => {
 
-        if(err){
+        if (err) {
             console.log(err);
-            return res.send("Error fixing data");
+            return res.send("Error fixing DB");
         }
 
-        res.send("Start times fixed!");
+        res.send("Database fixed!");
     });
 
 });

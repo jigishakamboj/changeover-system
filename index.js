@@ -443,7 +443,7 @@ app.post('/stop/:id', (req, res) => {
                      final_minutes=?
                  WHERE id=?`,
                 [endISO, duration, final, id],
-                (err) => {
+                function(err) {
 
                     if (err) {
                         console.log("❌ DB UPDATE ERROR:", err);

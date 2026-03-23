@@ -466,8 +466,15 @@ db.get(
 [id],
 (err,row)=>{
 
-if (!row || !row.start_time) {
-    console.log("⚠️ Missing start_time, fixing...");
+if (!row) {
+    console.log("No changeover found");
+    return res.redirect('/dashboard');
+}
+
+if (!row.start_time) {
+    console.log("⚠️ Missing start_time - redirecting");
+    return res.redirect('/dashboard');
+}
     row.start_time = new Date().toISOString();
 }
 

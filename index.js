@@ -474,7 +474,6 @@ if (!row) {
 if (!row.start_time) {
     console.log("⚠️ Missing start_time - redirecting");
     return res.redirect('/dashboard');
-}
     row.start_time = new Date().toISOString();
 }
 

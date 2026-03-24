@@ -52,8 +52,8 @@ Post Changeover Analysis
 
 <h1 id="timer">00:00:00</h1>
 
-<form action="/stop/<%= changeover.id %>" method="POST">
-<button type="submit" onclick="this.disabled=true; this.innerText='Stopping...'">
+<form action="/stop/<%= changeover.id %>" method="POST" onsubmit="return true;">
+<button type="submit">
 Stop Changeover
 </button>
 </form>

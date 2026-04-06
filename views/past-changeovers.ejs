@@ -177,19 +177,19 @@ function sortTable() {
 <tr>
 <td><%= co.changeover_id %></td>
 <td><%
+<%
 function formatDate(d) {
   if (!d) return "No Date";
 
-  // If already proper ISO (Postgres)
-  if (!isNaN(Date.parse(d))) {
-    return new Date(d).toLocaleDateString('en-GB');
-  }
-
-  // If dd-mm-yyyy (old data)
-  if (d.includes("-")) {
+  // If already ISO format (YYYY-MM-DD)
+  if (typeof d === "string" && d.includes("-")) {
     const parts = d.split("-");
-    if (parts.length === 3 && parts[0].length === 2) {
-      return `${parts[0]}/${parts[1]}/${parts[2]}`;
+    if (parts.length === 3) {
+      const year = parts[0];
+      const month = parts[1];
+      const day = parts[2];
+
+      return `${day}/${month}/${year}`; // DD/MM/YYYY
     }
   }
 

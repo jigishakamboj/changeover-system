@@ -143,7 +143,9 @@
 <p>Status: <span class="status <%= co.status %>"><%= co.status %></span></p>
 
 <form action="/stop/<%= co.id %>" method="POST">
-<button type="submit">Stop Changeover</button>
+  <button type="submit" class="danger-btn">
+    Stop Changeover
+  </button>
 </form>
 </div>
 <% }) %>

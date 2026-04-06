@@ -62,6 +62,28 @@
 
 <div class="cards">
 
+
+<div class="card full-width">
+  <h3>📊 Improvement Summary</h3>
+
+  <p>Before (PRE): <b><%= preAvg %> min</b></p>
+  <p>After (POST): <b><%= postAvg %> min</b></p>
+
+  <p style="color:green;">
+    Improvement: <b><%= improvement %>%</b>
+  </p>
+
+  <hr>
+
+  <p>Loss Before: <%= preLoss %> pcs</p>
+  <p>Loss After: <%= postLoss %> pcs</p>
+
+  <p style="color:green;">
+    Loss Reduction: <%= lossImprovement %>%
+  </p>
+</div>
+
+
 <div class="card">
 <h3>🏭 Changeover Performance</h3>
 <p style="font-size:22px;font-weight:600;"><%= performanceStatus %></p>
@@ -90,11 +112,19 @@
 <div class="card">
 <h4><%= co.from_style %> → <%= co.to_style %></h4>
 <p>Line: <%= formatLine(co.line) %></p>
-<p>Readiness: <%= co.readiness%>%</p>
-<div style="background:#eee;height:8px;border-radius:5px;">
-<div style="width:<%= co.readiness %>%;background:#4caf50;height:8px;border-radius:5px;"></div>
-</div>
+<p>Readiness: <%= co.readiness_percent %>%</p>
 
+<div style="background:#eee; border-radius:10px; overflow:hidden;">
+  <div style="
+    width:<%= co.readiness_percent %>%;
+    background:#28a745;
+    color:white;
+    padding:5px;
+    text-align:center;
+  ">
+    <%= co.readiness_percent %>% Ready
+  </div>
+</div>
 <a href="/readiness-checklist/<%= co.id %>">
 <button>Open Readiness Checklist</button>
 </a>

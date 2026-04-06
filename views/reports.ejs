@@ -50,6 +50,13 @@ Logout
 
 <div class="main-content">
 
+<div class="card-header">
+  <h2>Reports</h2>
+
+  <button onclick="window.print()" class="primary-btn">
+    Print
+  </button>
+</div>
 <!-- KPI CARDS -->
 
 <div class="cards">
@@ -75,18 +82,33 @@ Logout
 <!-- CHARTS -->
 
 <div class="card" style="margin-bottom:30px;">
-<h3>Changeover Time</h3>
+<div class="chart-header">
+  <h3>Changeover Time</h3>
+  <button onclick="downloadChart('timeChart')" class="icon-btn">
+    &#8681;
+  </button>
+</div>
 <canvas id="timeChart"></canvas>
 </div>
 
 
 <div class="card">
-<h3>Bucket Loss</h3>
+<div class="chart-header">
+  <h3>Bucket Loss</h3>
+  <button onclick="downloadChart('lossChart')" class="icon-btn">
+    &#8681;
+  </button>
+</div>
 <canvas id="lossChart"></canvas>
 </div>
 
 <div class="card" style="margin-top:30px;">
-<h3>Ramp-Up Days by Style</h3>
+<div class="chart-header">
+  <h3>Ramp Up Days</h3>
+  <button onclick="downloadChart('rampChart')" class="icon-btn">
+    &#8681;
+  </button>
+</div>
 <canvas id="rampChart"></canvas>
 </div>
 
@@ -113,65 +135,62 @@ document.getElementById("totalCO").innerText = total;
 document.getElementById("avgTime").innerText = avgTime + " min";
 document.getElementById("avgLoss").innerText = avgLoss + " pcs";
 
-
 const labels = changeovers.map(
 c => c.from_style + " → " + c.to_style
 );
 
 const setupTimes = changeovers.map(c => c.final_minutes || 0);
 const bucketLoss = changeovers.map(c => c.bucket_loss || 0);
-
-
-new Chart(document.getElementById('timeChart'), {
-
-type:'bar',
-
-data:{
-labels:labels,
-
-datasets:[{
-label:'Changeover Time (min)',
-data:setupTimes
-}]
-
-}
-
-});
-
-
-new Chart(document.getElementById('lossChart'), {
-
-type:'line',
-
-data:{
-labels:labels,
-
-datasets:[{
-label:'Bucket Loss (pcs)',
-data:bucketLoss
-}]
-
-}
-
-});
-
 const rampDays = changeovers.map(c => c.ramp_up_days || 0);
 
-new Chart(document.getElementById('rampChart'), {
-
-type:'bar',
-
-data:{
-labels:labels,
-
-datasets:[{
-label:'Ramp-Up Days',
-data:rampDays
-}]
-
-}
-
+// CHARTS
+new Chart(document.getElementById('timeChart'), {
+  type:'bar',
+  data:{
+    labels:labels,
+    datasets:[{
+      label:'Changeover Time (min)',
+      data:setupTimes
+    }]
+  }
 });
+
+new Chart(document.getElementById('lossChart'), {
+  type:'line',
+  data:{
+    labels:labels,
+    datasets:[{
+      label:'Bucket Loss (pcs)',
+      data:bucketLoss
+    }]
+  }
+});
+
+new Chart(document.getElementById('rampChart'), {
+  type:'bar',
+  data:{
+    labels:labels,
+    datasets:[{
+      label:'Ramp-Up Days',
+      data:rampDays
+    }]
+  }
+});
+
+// ✅ DOWNLOAD FUNCTION (SAFE)
+function downloadChart(chartId) {
+  const canvas = document.getElementById(chartId);
+
+  if (!canvas) {
+    console.log("Canvas not found:", chartId);
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.download = chartId + ".png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
 
 </script>
 

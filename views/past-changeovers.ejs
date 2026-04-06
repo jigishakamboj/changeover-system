@@ -176,7 +176,8 @@ function sortTable() {
 <% changeovers.forEach(co => { %>
 <tr>
 <td><%= co.changeover_id %></td>
-<td><%
+<td>
+
 <%
 function formatDate(d) {
   if (!d) return "No Date";

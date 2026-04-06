@@ -480,3 +480,20 @@ margin-top: 10px;
 .icon-btn:hover {
   background: #eee;
 }
+
+.primary-btn {
+  display: inline-block;
+  background: #2c3e50;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: 0.2s ease;
+}
+
+.primary-btn:hover {
+  background: #1a252f;
+  transform: translateY(-1px);
+}

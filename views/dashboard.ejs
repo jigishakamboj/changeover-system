@@ -125,9 +125,11 @@
     <%= co.readiness_percent %>% Ready
   </div>
 </div>
-<a href="/readiness-checklist/<%= co.id %>">
-<button>Open Readiness Checklist</button>
-</a>
+<div style="margin-top: 12px;">
+  <a href="/readiness-checklist/<%= co.id %>" class="primary-btn">
+    Open Readiness Checklist
+  </a>
+</div>
 </div>
 <% }) %>
 

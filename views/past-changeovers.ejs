@@ -182,9 +182,16 @@ function sortTable() {
 function formatDate(d) {
   if (!d) return "No Date";
 
-  if (typeof d === "string" && d.includes("-")) {
+  // Handle YYYY-MM-DD
+  if (d.includes("-")) {
     const [year, month, day] = d.split("-");
-    return `${day}/${month}/${year}`; // ✅ DD/MM/YYYY
+    return `${day}/${month}/${year}`;
+  }
+
+  // Handle YYYY/MM/DD  👈 YOUR CURRENT CASE
+  if (d.includes("/")) {
+    const [year, month, day] = d.split("/");
+    return `${day}/${month}/${year}`;
   }
 
   return "Invalid Date";

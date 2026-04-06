@@ -46,7 +46,115 @@
 } %>
 
 <div class="card">
-<h2>All Changeovers</h2>
+
+<div class="card-header">
+  <h2>All Changeovers</h2>
+
+  <button onclick="window.print()" class="primary-btn">
+    Print Report
+  </button>
+</div>
+
+
+<div class="filter-bar">
+
+  <input 
+    type="text" 
+    id="search" 
+    placeholder="Search style or line..."
+    onkeyup="filterTable()"
+  >
+
+  <select id="sort" onchange="sortTable()">
+    <option value="">Sort By</option>
+    <option value="date">Date</option>
+    <option value="duration">Duration</option>
+    <option value="loss">Bucket Loss</option>
+  </select>
+
+</div>
+
+<script>
+function filterTable() {
+  const input = document.getElementById("search").value.toLowerCase();
+  const rows = document.querySelectorAll("table tbody tr");
+
+  rows.forEach(row => {
+    row.style.display = row.innerText.toLowerCase().includes(input)
+      ? ""
+      : "none";
+  });
+}
+
+function sortTable() {
+  const type = document.getElementById("sort").value;
+  const tbody = document.querySelector("table tbody");
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+
+  const indexMap = {
+    date: 1,
+    duration: 5,
+    loss: 6
+  };
+
+  const index = indexMap[type];
+
+  if (!index) return;
+
+  rows.sort((a, b) => {
+    let A = a.children[index].innerText;
+    let B = b.children[index].innerText;
+
+    return type === "date"
+      ? new Date(A) - new Date(B)
+      : Number(A) - Number(B);
+  });
+
+  tbody.innerHTML = "";
+  rows.forEach(r => tbody.appendChild(r));
+}
+</script>
+
+<script>
+function filterTable() {
+  const input = document.getElementById("search").value.toLowerCase();
+  const rows = document.querySelectorAll("table tbody tr");
+
+  rows.forEach(row => {
+    row.style.display = row.innerText.toLowerCase().includes(input)
+      ? ""
+      : "none";
+  });
+}
+
+function sortTable() {
+  const type = document.getElementById("sort").value;
+  const tbody = document.querySelector("table tbody");
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+
+  const indexMap = {
+    date: 1,
+    duration: 5,
+    loss: 6
+  };
+
+  const index = indexMap[type];
+
+  if (!index) return;
+
+  rows.sort((a, b) => {
+    let A = a.children[index].innerText;
+    let B = b.children[index].innerText;
+
+    return type === "date"
+      ? new Date(A) - new Date(B)
+      : Number(A) - Number(B);
+  });
+
+  tbody.innerHTML = "";
+  rows.forEach(r => tbody.appendChild(r));
+}
+</script>
 
 <table style="width:100%; margin-top:20px;">
 <thead>
@@ -68,7 +176,28 @@
 <% changeovers.forEach(co => { %>
 <tr>
 <td><%= co.changeover_id %></td>
-<td><%= co.date %></td>
+<td><%
+function formatDate(d) {
+  if (!d) return "No Date";
+
+  // If already proper ISO (Postgres)
+  if (!isNaN(Date.parse(d))) {
+    return new Date(d).toLocaleDateString('en-GB');
+  }
+
+  // If dd-mm-yyyy (old data)
+  if (d.includes("-")) {
+    const parts = d.split("-");
+    if (parts.length === 3 && parts[0].length === 2) {
+      return `${parts[0]}/${parts[1]}/${parts[2]}`;
+    }
+  }
+
+  return "Invalid Date";
+}
+%>
+
+<%= formatDate(co.date) %></td>
 <td><%= formatLine(co.line) %></td>
 <td><%= co.from_style %></td>
 <td><%= co.to_style %></td>

@@ -43,10 +43,16 @@
 <div class="main-content">
 <div class="card">
 
-<h2>Plan New Changeover</h2>
+<div class="card-header">
+  <h2>Plan New Changeover</h2>
+
+  <button onclick="window.print()" class="primary-btn">
+    Print
+  </button>
+</div>
 
 <!-- ✅ FORM START -->
-<form action="/new-changeover" method="POST">
+<form action="<%= changeover ? '/edit-changeover/' + changeover.id : '/new-changeover' %>" method="POST">
 
 <h3 style="margin-top:30px;">Basic Information</h3>
 
@@ -163,10 +169,58 @@
 <textarea name="critical_operations" rows="4"></textarea>
 </div>
 
+<% if (changeover) { %>
+
+<div style="
+    margin-top:30px;
+    padding:20px;
+    border-radius:10px;
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+">
+
+<h3 style="margin-bottom:15px;">Post Changeover Analysis</h3>
+
+<div class="form-grid">
+
+    <div class="form-group">
+        <label>Ramp-Up Days</label><br>
+        <input type="number" name="ramp_up_days"
+        value="<%= changeover ? changeover.ramp_up_days : '' %>"
+    </div>
+
+    <div class="form-group">
+        <label>Bucket Loss</label><br>
+        <input type="number" name="bucket_loss"
+        value="<%= changeover ? changeover.bucket_loss : '' %>"
+    </div>
+
+    <div class="form-group">
+        <label>Major Delay</label><br>
+        <input type="text" name="major_delay"
+        value="<%= changeover ? changeover.major_delay : '' %>"
+    </div>
+
+</div>
+
+</div>
+
+<% } %>
 
 <div style="margin-top:40px;">
-<button type="submit">Create Changeover</button>
+  <button type="submit" style="
+    background:#2c7be5;
+    color:white;
+    padding:10px 20px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    width:200px;
+  ">
+    <%= changeover ? "Update Changeover" : "Create Changeover" %>
+  </button>
 </div>
+
 
 </form>
 <!-- ✅ FORM END -->

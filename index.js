@@ -1,5 +1,5 @@
-const db = require('./database/database.js');
-const express = require('express');
+const { db, pool}  = require('./database/database.js');
+const express = require('express');  
 const path = require('path');
 
 const app = express();
@@ -12,18 +12,18 @@ const PASSWORD = "1234";
 // FIX LINE DISPLAY FORMAT
 // =====================
 
-function formatLine(line){
-    if(!line) return "";
+function formatLine(line) {
+    if (!line) return "";
 
     // already correct
-    if(typeof line === "string" && line.includes("/")){
+    if (typeof line === "string" && line.includes("/")) {
         return line;
     }
 
     const date = new Date(line);
 
-    if(!isNaN(date)){
-        return `${date.getDate()}/${date.getMonth()+1}`;
+    if (!isNaN(date)) {
+        return `${date.getDate()}/${date.getMonth() + 1}`;
     }
 
     return line;
@@ -45,45 +45,41 @@ app.use(express.static(path.join(__dirname, 'public')));
 // GLOBAL PENDING COUNT
 // =====================
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
+  try {
+    const result = await pool.query(`
+    SELECT COUNT(*) AS count
+    FROM changeovers
+    WHERE status='closed'
+    AND (bucket_loss IS NULL OR bucket_loss = 0)
+`);
+    res.locals.pendingCount = result.rows[0].count;
 
-db.get(`
-SELECT COUNT(*) AS count
-FROM changeovers
-WHERE status='closed'
-AND (ramp_up_days IS NULL OR ramp_up_days = '')
-`, (err,row)=>{
+  } catch (err) {
+    console.log(err);
+    res.locals.pendingCount = 0;
+  }
 
-if(err){
-console.log(err);
-res.locals.pendingCount = 0;
-}else{
-res.locals.pendingCount = row.count;
-}
-
-next();
-
-});
-
+  next();
 });
 
 // =====================
 // LOGIN
 // =====================
 
-app.get('/', (req,res)=>{
-res.render('login');
+app.get('/', (req, res) => {
+    res.render('login');
 });
 
-app.post('/login',(req,res)=>{
+app.post('/login', (req, res) => {
 
-const {username,password} = req.body;
+    const { username, password } = req.body;
 
-if(username === USERNAME && password === PASSWORD){
-res.redirect('/dashboard');
-}else{
-res.render('login',{ error:"Invalid username or password"});
-}
+    if (username === USERNAME && password === PASSWORD) {
+        res.redirect('/dashboard');
+    } else {
+        res.render('login', { error: "Invalid username or password" });
+    }
 
 });
 
@@ -91,668 +87,775 @@ res.render('login',{ error:"Invalid username or password"});
 // NEW CHANGEOVER
 // =====================
 
-app.get('/new-changeover',(req,res)=>{
-res.render('new-changeover');
-});
-
-app.post('/new-changeover',(req,res)=>{
-
-const {date,line,from_style,to_style,deduction_minutes} = req.body;
-
-db.get("SELECT COUNT(*) as count FROM changeovers",(err,row)=>{
-
-if(err){
-console.log(err);
-return res.redirect('/dashboard');
-}
-
-const nextId = row.count + 1;
-const changeoverId = "CO" + String(nextId).padStart(2,"0");
-
-db.run(`
-INSERT INTO changeovers
-(changeover_id,date,line,from_style,to_style,status,deduction_minutes)
-VALUES (?,?,?,?,?,'planned',?)
-`,
-[
-changeoverId,
-date,
-line,
-from_style,
-to_style,
-deduction_minutes
-],
-(err)=>{
-
-if(err){
-console.log(err);
-}
-
-res.redirect('/dashboard');
-
-});
-
-});
-
-});
-
-// =====================
-// EDIT CHANGEOVER PAGE
-// =====================
-
-app.get('/edit-changeover/:id',(req,res)=>{
-
-const id = req.params.id;
-
-db.get(
-"SELECT * FROM changeovers WHERE id=?",
-[id],
-(err,row)=>{
-
-if(err || !row){
-return res.redirect('/dashboard');
-}
-
-res.render('new-changeover',{
-changeover:row
-});
-
-});
-
+app.get('/new-changeover', (req, res) => {
+    res.render('new-changeover', { changeover: null });
 });
 
 // =====================
 // SAVE NEW CHANGEOVER
 // =====================
 
-app.post('/new-changeover',(req,res)=>{
+app.post('/new-changeover', async (req, res) => {
 
-const {date,line,from_style,to_style,deduction_minutes} = req.body;
+  try {
 
-db.get("SELECT COUNT(*) as count FROM changeovers",(err,row)=>{
+    const {
+      date,
+      line,
+      from_style,
+      from_product_type,
+      to_style,
+      to_product_type,
+      machine_types,
+      needle_req,
+      throat_plate,
+      presser_foot,
+      feed_dog,
+      binders,
+      attachments,
+      templates,
+      critical_operations
+    } = req.body;
 
-if(err){
-console.log(err);
-return res.redirect('/dashboard');
+    // 🔧 FIX DATE FORMAT (dd-mm-yyyy → yyyy-mm-dd)
+let formattedDate = date;
+
+if (date && date.includes("-")) {
+  const parts = date.split("-");
+
+  // If user entered dd-mm-yyyy
+  if (parts[0].length === 2) {
+    const [dd, mm, yyyy] = parts;
+    formattedDate = `${yyyy}-${mm}-${dd}`;
+  }
 }
 
-const nextId = row.count + 1;
-const changeoverId = "CO" + String(nextId).padStart(2,"0");
+    // ✅ Handle checkbox
+    let machines = machine_types || [];
+    if (!Array.isArray(machines)) machines = [machines];
 
-db.run(`
-INSERT INTO changeovers
-(changeover_id,date,line,from_style,to_style,status,deduction_minutes)
-VALUES (?,?,?,?,?,'planned',?)
-`,
-[
-changeoverId,
-date,
-line,
-from_style,
-to_style,
-deduction_minutes
-],
-(err)=>{
+    const machineTypesString = machines.join(',');
 
-if(err){
-console.log(err);
-}
+// 🔧 CLEAN CO ID GENERATION
+const result = await pool.query("SELECT COUNT(*) FROM changeovers");
+const count = parseInt(result.rows[0].count) + 1;
 
-res.redirect('/dashboard');
+
+const changeoverId = "CO" + String(count).padStart(2, "0");
+
+
+    await pool.query(`
+      INSERT INTO changeovers (
+        changeover_id,
+        date,
+        line,
+        from_style,
+        from_product_type,
+        to_style,
+        to_product_type,
+        machine_types,
+        needle_req,
+        throat_plate,
+        presser_foot,
+        feed_dog,
+        binders,
+        attachments,
+        templates,
+        critical_operations,
+        status,
+        type
+      )
+      VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
+        'planned',
+        'post'
+      )
+    `, [
+      changeoverId,
+      formattedDate,
+      line,
+      from_style,
+      from_product_type,
+      to_style,
+      to_product_type,
+      machineTypesString,
+      needle_req,
+      throat_plate,
+      presser_foot,
+      feed_dog,
+      binders,
+      attachments,
+      templates,
+      critical_operations
+    ]);
+
+    console.log("✅ Changeover saved");
+
+    res.redirect('/dashboard');
+
+  } catch (err) {
+    console.log("❌ Insert error:", err);
+    res.send("Error saving changeover");
+  }
 
 });
 
-});
+
+// =====================
+// EDIT CHANGEOVER PAGE
+// =====================
+
+app.get('/edit-changeover/:id', async (req, res) => {
+
+    try {
+        const result = await pool.query(
+            "SELECT * FROM changeovers WHERE id = $1",
+            [req.params.id]
+        );
+
+        const row = result.rows[0];
+
+        if (!row) {
+            return res.send("Changeover not found");
+        }
+
+        res.render('new-changeover', { changeover: row });
+
+    } catch (err) {
+        console.log(err);
+        res.send("Error loading changeover");
+    }
 
 });
 
 // =====================
-// DASHBOARD
+// UPDATE CHANGEOVER
 // =====================
 
-app.get('/dashboard',(req,res)=>{
+app.post('/edit-changeover/:id', async (req, res) => {
 
-db.all("SELECT * FROM changeovers ORDER BY id DESC",(err,rows)=>{
+    try {
+        const id = req.params.id;
 
-if(err){
-console.log(err);
-return res.send("Database error");
-}
+        const {
+            ramp_up_days,
+            bucket_loss,
+            major_delay
+        } = req.body;
+
+        await pool.query(`
+            UPDATE changeovers
+            SET 
+                ramp_up_days = $1,
+                bucket_loss = $2,
+                major_delay = $3
+            WHERE id = $4
+        `, [ramp_up_days, bucket_loss, major_delay, id]);
+
+        console.log("✅ Changeover updated");
+
+        res.redirect('/past-changeovers');
+
+    } catch (err) {
+        console.log(err);
+        res.send("Update error");
+    }
+
+});
+
+app.get('/dashboard', async (req,res)=>{
+
+try {
+
+const result = await pool.query("SELECT * FROM changeovers ORDER BY id DESC");
+const rows = result.rows;
+
+rows.forEach(r => {
+
+  const checklistFields = [
+    r.fabric_ready,
+    r.panels_ready,
+    r.thread_ready,
+    r.trims_ready,
+    r.labels_ready,
+    r.attachments_ready,
+    r.needle_ready,
+    r.presser_ready,
+    r.bobbins_ready,
+    r.techpack_ready,
+    r.operation_ready,
+    r.sample_ready,
+    r.quality_ready,
+    r.operators_ready,
+    r.workstation_ready,
+    r.line_balance_ready
+  ];
+
+  const completed = checklistFields.filter(v => v === 1).length;
+
+  r.readiness_percent = Math.round((completed / checklistFields.length) * 100);
+
+});
+
+const pre = rows.filter(r => r.type === 'pre');
+const post = rows.filter(r => r.type === 'post');
+
 
 const planned = rows.filter(r=>r.status==='planned');
 const active = rows.filter(r=>r.status==='in_progress');
 const closed = rows.filter(r=>r.status==='closed');
 
-// FIX LINE DISPLAY
-[...planned, ...active, ...closed].forEach(co=>{
-co.line = formatLine(co.line);
-});
+// =======================
+// BEST & WORST CHANGEOVER
+// =======================
 
-// READINESS SCORE
+let bestCO = "-";
+let worstCO = "-";
 
-planned.forEach(co=>{
+if (closed.length > 0) {
+    bestCO = Math.min(...closed.map(c => c.final_minutes || 0));
+    worstCO = Math.max(...closed.map(c => c.final_minutes || 0));
+}
 
-const totalChecks = 15;
+// =======================
+// TOP LOSS STYLE
+// =======================
 
-const completed =
-(co.fabric_ready||0)+
-(co.panels_ready||0)+
-(co.thread_ready||0)+
-(co.trims_ready||0)+
-(co.labels_ready||0)+
-(co.attachments_ready||0)+
-(co.needle_ready||0)+
-(co.presser_ready||0)+
-(co.bobbins_ready||0)+
-(co.techpack_ready||0)+
-(co.operation_ready||0)+
-(co.sample_ready||0)+
-(co.quality_ready||0)+
-(co.operators_ready||0)+
-(co.line_balance_ready||0);
+let topLossStyle = "-";
+let topLossValue = 0;
 
-co.readiness = Math.round((completed/totalChecks)*100);
+if (closed.length > 0) {
+    const worstLoss = closed.reduce((max, co) =>
+        (co.bucket_loss || 0) > (max.bucket_loss || 0) ? co : max
+    );
 
-});
+    topLossStyle = (worstLoss.from_style || "-") + " → " + (worstLoss.to_style || "-");
+    topLossValue = worstLoss.bucket_loss || 0;
+}
 
-// RAMP STATUS
-
-closed.forEach(co=>{
-
-if(co.ramp_up_days==1) co.ramp_status="🟢 Stable";
-else if(co.ramp_up_days==2) co.ramp_status="🟡 Moderate";
-else if(co.ramp_up_days>=3) co.ramp_status="🔴 Slow";
-else co.ramp_status="-";
-
-});
-
+// =======================
 // AVERAGES
+// =======================
 
-const avgSetup = closed.length>0
-?Math.round(closed.reduce((s,c)=>s+(c.final_minutes||0),0)/closed.length)
-:0;
+let avgSetup = 0;
+let avgBucket = 0;
 
-const avgBucket = closed.length>0
-?Math.round(closed.reduce((s,c)=>s+(c.bucket_loss||0),0)/closed.length)
-:0;
+let preAvg = 0;
+let postAvg = 0;
 
-// PERFORMANCE
-
-let performanceStatus="No Data";
-
-if(closed.length>0){
-if(avgSetup<=40 && avgBucket<=150) performanceStatus="🟢 GOOD";
-else if(avgSetup<=60) performanceStatus="🟡 AVERAGE";
-else performanceStatus="🔴 NEEDS IMPROVEMENT";
+if (pre.length > 0) {
+    preAvg = Math.round(
+        pre.reduce((s,c)=>s+(c.final_minutes||0),0)/pre.length
+    );
 }
 
-// TOP LOSS
-
-let topLossStyle="-";
-let topLossValue=0;
-
-if(closed.length>0){
-const worstLoss = closed.reduce((max,co)=>
-(co.bucket_loss||0)>(max.bucket_loss||0)?co:max
-);
-topLossStyle = worstLoss.from_style+" → "+worstLoss.to_style;
-topLossValue = worstLoss.bucket_loss||0;
+if (post.length > 0) {
+    postAvg = Math.round(
+        post.reduce((s,c)=>s+(c.final_minutes||0),0)/post.length
+    );
 }
 
+let improvement = 0;
+
+if (preAvg > 0 && postAvg > 0) {
+    improvement = Math.round(((preAvg - postAvg)/preAvg)*100);
+}
+
+
+if (closed.length > 0) {
+    avgSetup = Math.round(
+        closed.reduce((sum,c)=>sum+(c.final_minutes||0),0) / closed.length
+    );
+
+    avgBucket = Math.round(
+        closed.reduce((sum,c)=>sum+(c.bucket_loss||0),0) / closed.length
+    );
+}
+
+const preLoss = pre.length > 0
+  ? Math.round(pre.reduce((s, c) => s + (c.bucket_loss || 0), 0) / pre.length)
+  : 0;
+
+const postLoss = post.length > 0
+  ? Math.round(post.reduce((s, c) => s + (c.bucket_loss || 0), 0) / post.length)
+  : 0;
+
+const lossImprovement = preLoss > 0
+  ? Math.round(((preLoss - postLoss) / preLoss) * 100)
+  : 0;
+
+// =======================
 // PROBLEMS
+// =======================
 
 const problems = closed.filter(c =>
-(c.final_minutes && c.final_minutes > avgSetup*1.5) ||
-(c.bucket_loss && c.bucket_loss > avgBucket*1.5)
+    (c.final_minutes && c.final_minutes > avgSetup * 1.5) ||
+    (c.bucket_loss && c.bucket_loss > avgBucket * 1.5)
 );
 
-// BEST / WORST
+// =======================
+// PERFORMANCE STATUS
+// =======================
 
-let bestCO=0;
-let worstCO=0;
+const performanceStatus = closed.length > 0
+    ? avgSetup < 60 ? "🟢 Good"
+    : avgSetup < 120 ? "🟡 Moderate"
+    : "🔴 Needs Improvement"
+    : "-";
 
-if(closed.length>0){
-bestCO = Math.min(...closed.map(c=>c.final_minutes||0));
-worstCO = Math.max(...closed.map(c=>c.final_minutes||0));
-}
-
+// =======================
 // RENDER
+// =======================
 
 res.render('dashboard',{
-planned,
-active,
-closed,
-problems,
-total: rows.length,
-avgSetup,
-avgBucket,
-bestCO,
-worstCO,
-topLossStyle,
-topLossValue,
-performanceStatus
+    planned,
+    active,
+    closed,
+    problems,
+    total: rows.length,
+    avgSetup,
+    avgBucket,
+    performanceStatus,
+    bestCO,
+    worstCO,
+    topLossStyle,
+    topLossValue,
+    preAvg,
+    postAvg,
+    improvement,
+    preLoss,
+    postLoss,
+    lossImprovement
 });
 
-});
+} catch(err){
+console.log(err);
+res.send("Database error");
+}
 
 });
+    // =====================
+    // AVERAGES (THIS WAS MISSING)
+    // =====================
+    let avgSetup = 0;
+    let avgBucket = 0;
 
-// =====================
-// PAST CHANGEOVERS
-// =====================
+    // =====================
+    // PAST CHANGEOVERS
+    // =====================
 
-app.get('/past-changeovers',(req,res)=>{
+app.get('/past-changeovers', async (req,res)=>{
 
-db.all("SELECT * FROM changeovers ORDER BY id DESC",(err,rows)=>{
+try {
+
+const result = await pool.query("SELECT * FROM changeovers ORDER BY id DESC");
+const rows = result.rows;
 
 rows.forEach(co=>{
-co.line = formatLine(co.line);
+    co.line = formatLine(co.line);
 });
 
 res.render('past-changeovers',{ changeovers:rows });
 
-});
+} catch(err){
+    console.log(err);
+    res.send("Database error");
+}
 
 });
+    // =====================
+    // START CHANGEOVER
+    // =====================
 
-// =====================
-// START CHANGEOVER
-// =====================
+app.post('/start-changeover/:id', async (req, res) => {
 
-app.post('/start/:id', (req, res) => {
+  const id = req.params.id;
 
-    const id = req.params.id;
-    const startTime = new Date().toISOString();
+  try {
 
-    db.run(
-        `UPDATE changeovers
-         SET status='in_progress',
-             start_time=?
-         WHERE id=?`,
-        [startTime, id],
-        function(err) {
-
-            if (err) {
-                console.log("❌ START ERROR:", err);
-                return res.redirect('/dashboard');
-            }
-
-            if (this.changes === 0) {
-                console.log("❌ No rows updated");
-                return res.redirect('/dashboard');
-            }
-
-            console.log("✅ Changeover started:", id, startTime);
-
-            res.redirect(`/active-changeover/${id}`);
-        }
+    await pool.query(
+      `UPDATE changeovers 
+       SET status = 'in_progress', 
+           start_time = NOW()
+       WHERE id = $1`,
+      [id]
     );
 
+    console.log("✅ Changeover started:", id);
+
+    res.redirect('/active-changeover/' + id);
+
+  } catch (err) {
+    console.log("❌ START ERROR:", err);
+    res.redirect('/dashboard');
+  }
+
 });
 
-// =====================
-// STOP CHANGEOVER (FIXED)
-// =====================
+    // =====================
+    // STOP CHANGEOVER (FIXED)
+    // =====================
 
-app.post('/stop/:id', (req, res) => {
+   app.post('/stop/:id', async (req, res) => {
 
-    console.log("➡️ STOP REQUEST RECEIVED");
+  const id = req.params.id;
 
-    const id = req.params.id;
+  try {
+
+    const result = await pool.query(
+      "SELECT start_time, deduction_minutes FROM changeovers WHERE id = $1",
+      [id]
+    );
+
+    const row = result.rows[0];
+
+    if (!row) return res.send("No data");
+
+    const startTime = new Date(row.start_time).getTime();
     const endTime = Date.now();
 
-    db.get(
-        "SELECT start_time, deduction_minutes FROM changeovers WHERE id=?",
-        [id],
-        (err, row) => {
+    const duration = Math.floor((endTime - startTime) / 60000);
+    const deduction = row.deduction_minutes || 0;
+    const final = Math.max(0, duration - deduction);
 
-            if (err) {
-                console.log("❌ DB GET ERROR:", err);
-                return res.send("DB error");
-            }
+    await pool.query(`
+      UPDATE changeovers
+      SET status='closed',
+          end_time = NOW(),
+          duration_minutes=$1,
+          final_minutes=$2
+      WHERE id=$3
+    `, [duration, final, id]);
 
-            if (!row) {
-                console.log("❌ No row found");
-                return res.send("No data");
-            }
+    res.redirect(`/post-changeover/${id}`);
 
-            console.log("✅ Row fetched:", row);
-
-            const startTime = new Date(row.start_time).getTime();
-
-            if (isNaN(startTime)) {
-                console.log("❌ Invalid start time");
-                return res.send("Invalid start time");
-            }
-
-            const durationMs = endTime - startTime;
-            const duration = Math.floor(durationMs / 60000);
-
-            const deduction = row.deduction_minutes || 0;
-            const final = Math.max(0, duration - deduction);
-
-            const endISO = new Date(endTime).toISOString();
-
-            console.log("⏱ Duration:", duration);
-
-            db.run(
-                `UPDATE changeovers
-                 SET status='closed',
-                     end_time=?,
-                     duration_minutes=?,
-                     final_minutes=?
-                 WHERE id=?`,
-                [endISO, duration, final, id],
-                function(err) {
-
-                    if (err) {
-                        console.log("❌ DB UPDATE ERROR:", err);
-                        return res.send("Update error");
-                    }
-
-                    console.log("✅ Changeover stopped successfully");
-
-                    res.redirect(`/post-changeover/${id}`);
-                }
-            );
-
-        }
-    );
+  } catch (err) {
+    console.log(err);
+    res.redirect('/dashboard');
+  }
 
 });
-
+ 
 // =====================
-// ACTIVE PAGE
-// =====================
+    // ACTIVE PAGE
+    // =====================
 
-app.get('/active-changeover/:id', (req, res) => {
+app.get('/active-changeover/:id', async (req, res) => {
 
     const id = req.params.id;
 
-    db.get(
-        "SELECT * FROM changeovers WHERE id=?",
-        [id],
-        (err, row) => {
+    try {
 
-            if (err) {
-                console.log(err);
-                return res.redirect('/dashboard');
-            }
+        const result = await pool.query(
+            "SELECT * FROM changeovers WHERE id = $1",
+            [id]
+        );
 
-            if (!row) {
-                console.log("No changeover found");
-                return res.redirect('/dashboard');
-            }
+        const changeover = result.rows[0];
 
-            if (!row.start_time) {
-                console.log("⚠️ Missing start_time - redirecting");
-                return res.redirect('/dashboard');
-            }
-
-            res.render('active-changeover', { changeover: row });
-
+        if (!changeover) {
+            console.log("❌ No changeover found");
+            return res.redirect('/dashboard');
         }
+
+        if (!changeover.start_time) {
+            console.log("⚠️ Missing start_time");
+            return res.redirect('/dashboard');
+        }
+
+        res.render('active-changeover', {
+            changeover,
+            pendingCount: 0
+        });
+
+    } catch (err) {
+        console.log("❌ ACTIVE PAGE ERROR:", err);
+        res.redirect('/dashboard');
+    }
+
+});
+
+    // =====================
+    // POST CHANGEOVER PAGE
+    // =====================
+
+ app.get('/post-changeover/:id', async (req, res) => {
+
+  const id = req.params.id;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM changeovers WHERE id = $1",
+      [id]
     );
 
-});
+    const row = result.rows[0];
 
-// =====================
-// POST CHANGEOVER PAGE
-// =====================
+    res.render('post-changeover', { changeover: row });
 
-app.get('/post-changeover/:id',(req,res)=>{
-
-const id=req.params.id;
-
-db.get(
-"SELECT * FROM changeovers WHERE id=?",
-[id],
-(err,row)=>{
-
-if(err){
-console.log(err);
-}
-
-res.render('post-changeover',{ changeover:row });
+  } catch (err) {
+    console.log(err);
+    res.redirect('/dashboard');
+  }
 
 });
 
-});
+    // =====================
+    // SAVE POST ANALYSIS
+    // =====================
 
-// =====================
-// SAVE POST ANALYSIS
-// =====================
+app.post('/post-changeover/:id', async (req, res) => {
 
-app.post('/post-changeover/:id',(req,res)=>{
+  const id = req.params.id;
 
-const id=req.params.id;
-const {ramp_up_days,bucket_loss,major_delay}=req.body;
+  let { ramp_up_days, bucket_loss, major_delay } = req.body;
 
-db.run(`
-UPDATE changeovers
-SET ramp_up_days=?,
-bucket_loss=?,
-major_delay=?
-WHERE id=?`,
-[ramp_up_days,bucket_loss,major_delay,id],
-(err)=>{
+  // 🔥 SAFE CONVERSION (handles "", undefined, NaN)
+  ramp_up_days = ramp_up_days ? parseInt(ramp_up_days) : null;
+  bucket_loss = bucket_loss ? parseInt(bucket_loss) : null;
 
-if(err){
-console.log(err);
-}
+  try {
 
-res.redirect('/dashboard');
+    await pool.query(`
+      UPDATE changeovers
+      SET ramp_up_days = $1,
+          bucket_loss = $2,
+          major_delay = $3
+      WHERE id = $4
+    `, [
+      isNaN(ramp_up_days) ? null : ramp_up_days,
+      isNaN(bucket_loss) ? null : bucket_loss,
+      major_delay || null,
+      id
+    ]);
 
-});
+    res.redirect('/dashboard');
 
-});
-
-// =====================
-// DELETE
-// =====================
-
-app.post('/delete/:id',(req,res)=>{
-
-const id=req.params.id;
-
-db.run("DELETE FROM changeovers WHERE id=?",[id],(err)=>{
-
-if(err){
-console.log(err);
-}
-
-res.redirect('/dashboard');
+  } catch (err) {
+    console.log("❌ POST ANALYSIS ERROR:", err);
+    res.send("Error saving analysis"); // 👈 IMPORTANT for debugging
+  }
 
 });
+    // =====================
+    // DELETE
+    // =====================
+
+app.post('/delete/:id', async (req, res) => {
+
+  const id = req.params.id;
+
+  try {
+    await pool.query("DELETE FROM changeovers WHERE id = $1", [id]);
+    res.redirect('/dashboard');
+  } catch (err) {
+    console.log(err);
+    res.redirect('/dashboard');
+  }
 
 });
 
-// =====================
+    // =====================
+    // REPORTS
+    // =====================
+
+  // =====================
 // REPORTS
 // =====================
 
-app.get('/reports',(req,res)=>{
+app.get('/reports', async (req, res) => {
 
-db.all("SELECT * FROM changeovers WHERE status='closed'",(err,rows)=>{
+  try {
+    const result = await pool.query(
+      "SELECT * FROM changeovers WHERE status='closed'"
+    );
 
-rows.forEach(co=>{
-co.line = formatLine(co.line);
-});
+    const rows = result.rows;
 
-res.render('reports',{ changeovers:rows });
-
-});
-
-});
-
-app.get('/test123', (req, res) => {
-    db.all("SELECT id, line FROM changeovers", (err, rows) => {
-
-        if(err){
-            console.log(err);
-            return res.send("Error");
-        }
-
-        rows.forEach(co => {
-
-            let line = co.line;
-
-            if(line && typeof line === "string" && line.includes("-")){
-
-                const parts = line.split("-");
-
-                if(parts.length === 2){
-                    const day = parseInt(parts[0]);
-
-                    const months = {
-                        Jan:1, Feb:2, Mar:3, Apr:4,
-                        May:5, Jun:6, Jul:7, Aug:8,
-                        Sep:9, Oct:10, Nov:11, Dec:12
-                    };
-
-                    const month = months[parts[1]];
-
-                    if(month){
-                        const fixed = `${day}/${month}`;
-
-                        db.run(
-                            "UPDATE changeovers SET line=? WHERE id=?",
-                            [fixed, co.id]
-                        );
-                    }
-                }
-            }
-
-        });
-
-        res.send("ALL LINES FIXED");
-    });
-});
-
-// =====================
-// PENDING ANALYSIS
-// =====================
-
-app.get('/pending-analysis',(req,res)=>{
-
-db.all(`
-SELECT * FROM changeovers
-WHERE status='closed'
-AND (ramp_up_days IS NULL OR ramp_up_days='')
-`,
-(err,rows)=>{
-
-if(err){
-console.log(err);
-return res.redirect('/dashboard');
-}
-
-res.render('pending-analysis',{ changeovers:rows });
-
-});
-
-});
-
-// =====================
-// READINESS CHECKLIST
-// =====================
-
-app.get('/readiness-checklist/:id',(req,res)=>{
-
-const id=req.params.id;
-
-db.get(
-"SELECT * FROM changeovers WHERE id=?",
-[id],
-(err,row)=>{
-
-res.render('readiness-checklist',{ changeover:row });
-
-});
-
-});
-
-// =====================
-// SAVE READINESS
-// =====================
-
-app.post('/save-readiness/:id',(req,res)=>{
-
-const id=req.params.id;
-const d=req.body;
-
-db.run(`
-UPDATE changeovers SET
-fabric_ready=?,
-panels_ready=?,
-thread_ready=?,
-trims_ready=?,
-labels_ready=?,
-attachments_ready=?,
-needle_ready=?,
-presser_ready=?,
-bobbins_ready=?,
-techpack_ready=?,
-operation_ready=?,
-sample_ready=?,
-quality_ready=?,
-operators_ready=?,
-workstation_ready=?,
-line_balance_ready=?
-WHERE id=?`,
-[
-d.fabric_ready?1:0,
-d.panels_ready?1:0,
-d.thread_ready?1:0,
-d.trims_ready?1:0,
-d.labels_ready?1:0,
-d.attachments_ready?1:0,
-d.needle_ready?1:0,
-d.presser_ready?1:0,
-d.bobbins_ready?1:0,
-d.techpack_ready?1:0,
-d.operation_ready?1:0,
-d.sample_ready?1:0,
-d.quality_ready?1:0,
-d.operators_ready?1:0,
-d.workstation_ready?1:0,
-d.line_balance_ready?1:0,
-id
-],
-(err)=>{
-
-if(err){
-console.log(err);
-}
-
-res.redirect('/readiness-checklist/'+id);
-
-});
-
-});
-
-app.get('/fix-db', (req, res) => {
-
-    db.run(`
-        UPDATE changeovers
-        SET start_time = datetime('now')
-        WHERE start_time IS NULL OR start_time = ''
-    `, (err) => {
-
-        if (err) {
-            console.log(err);
-            return res.send("Error fixing DB");
-        }
-
-        res.send("Database fixed!");
+    rows.forEach(co => {
+      co.line = formatLine(co.line);
     });
 
+    res.render('reports', { changeovers: rows });
+
+  } catch (err) {
+    console.log(err);
+    res.redirect('/dashboard');
+  }
+
 });
 
+
 // =====================
-// SERVER
+// FIX LINE FORMAT TOOL (optional)
 // =====================
 
-app.listen(PORT, '0.0.0.0', () => {
-console.log(`Server running on port ${PORT}`);
+app.get('/test123', async (req, res) => {
+
+  try {
+    const result = await pool.query("SELECT id, line FROM changeovers");
+
+    const rows = result.rows;
+
+    for (const co of rows) {
+
+      let line = co.line;
+
+      if (line && typeof line === "string" && line.includes("-")) {
+
+        const parts = line.split("-");
+
+        if (parts.length === 2) {
+
+          const day = parseInt(parts[0]);
+
+          const months = {
+            Jan: 1, Feb: 2, Mar: 3, Apr: 4,
+            May: 5, Jun: 6, Jul: 7, Aug: 8,
+            Sep: 9, Oct: 10, Nov: 11, Dec: 12
+          };
+
+          const month = months[parts[1]];
+
+          if (month) {
+
+            const fixed = `${day}/${month}`;
+
+            await pool.query(
+              "UPDATE changeovers SET line=$1 WHERE id=$2",
+              [fixed, co.id]
+            );
+
+          }
+        }
+      }
+    }
+
+    res.send("ALL LINES FIXED");
+
+  } catch (err) {
+    console.log(err);
+    res.send("Error fixing lines");
+  }
+
 });
+
+    // =====================
+    // PENDING ANALYSIS
+    // =====================
+
+app.get('/pending-analysis', async (req, res) => {
+
+  try {
+    const result = await pool.query(`
+      SELECT * FROM changeovers
+      WHERE status='closed'
+      AND (ramp_up_days IS NULL OR ramp_up_days = 0)
+      ORDER BY id DESC
+    `);
+
+    const rows = result.rows;
+
+    res.render('pending-analysis', {
+      changeovers: rows
+    });
+
+  } catch (err) {
+    console.log("❌ PENDING ANALYSIS ERROR:", err);
+    res.redirect('/dashboard');
+  }
+
+});
+
+    // =====================
+    // READINESS CHECKLIST
+    // =====================
+
+app.get('/readiness-checklist/:id', async (req, res) => {
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM changeovers WHERE id = $1",
+      [req.params.id]
+    );
+
+    const changeover = result.rows[0];
+
+    if (!changeover) {
+      return res.send("Changeover not found");
+    }
+
+    res.render('readiness-checklist', { changeover });
+
+  } catch (err) {
+    console.log(err);
+    res.send("Error loading checklist");
+  }
+
+});
+    // =====================
+    // SAVE READINESS
+    // =====================
+
+  app.post('/save-readiness/:id', async (req, res) => {
+
+  const id = req.params.id;
+  const d = req.body;
+
+  try {
+
+    await pool.query(`
+      UPDATE changeovers SET
+        fabric_ready=$1,
+        panels_ready=$2,
+        thread_ready=$3,
+        trims_ready=$4,
+        labels_ready=$5,
+        attachments_ready=$6,
+        needle_ready=$7,
+        presser_ready=$8,
+        bobbins_ready=$9,
+        techpack_ready=$10,
+        operation_ready=$11,
+        sample_ready=$12,
+        quality_ready=$13,
+        operators_ready=$14,
+        workstation_ready=$15,
+        line_balance_ready=$16
+      WHERE id=$17
+    `, [
+      d.fabric_ready ? 1 : 0,
+      d.panels_ready ? 1 : 0,
+      d.thread_ready ? 1 : 0,
+      d.trims_ready ? 1 : 0,
+      d.labels_ready ? 1 : 0,
+      d.attachments_ready ? 1 : 0,
+      d.needle_ready ? 1 : 0,
+      d.presser_ready ? 1 : 0,
+      d.bobbins_ready ? 1 : 0,
+      d.techpack_ready ? 1 : 0,
+      d.operation_ready ? 1 : 0,
+      d.sample_ready ? 1 : 0,
+      d.quality_ready ? 1 : 0,
+      d.operators_ready ? 1 : 0,
+      d.workstation_ready ? 1 : 0,
+      d.line_balance_ready ? 1 : 0,
+      id
+    ]);
+
+    res.redirect('/readiness-checklist/' + id);
+
+  } catch (err) {
+    console.log(err);
+    res.send("Error saving readiness");
+  }
+
+});
+
+    // =====================
+    // SERVER
+    // =====================
+
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
+    });

@@ -147,15 +147,40 @@ Line Balancing Completed
 
 <div style="margin-top:30px; display:flex; gap:15px;">
 
-<button type="submit"
-formaction="/save-readiness/<%= changeover.id %>">
-Save Progress
-</button>
+</div>
 
-<button type="submit"
-formaction="/start/<%= changeover.id %>">
-Start Changeover
-</button>
+<div style="
+  margin-top:40px;
+  display:flex;
+  justify-content:flex-end;
+  gap:20px;
+">
+
+  <button type="submit"
+    formaction="/save-readiness/<%= changeover.id %>"
+    style="
+      background:#6c757d;
+      color:white;
+      padding:10px 20px;
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
+    ">
+    Save Progress
+  </button>
+
+  <button type="submit"
+    formaction="/start-changeover/<%= changeover.id %>"
+    style="
+      background:#28a745;
+      color:white;
+      padding:10px 20px;
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
+    ">
+    Start Changeover
+  </button>
 
 </div>
 

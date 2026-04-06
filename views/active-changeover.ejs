@@ -53,9 +53,11 @@ Post Changeover Analysis
 <h1 id="timer">00:00:00</h1>
 
 <form action="/stop/<%= changeover.id %>" method="POST" onsubmit="return true;">
-<button type="submit">
-Stop Changeover
-</button>
+<div style="margin-top:20px;">
+  <button type="submit" class="danger-btn">
+    Stop Changeover
+  </button>
+</div>
 </form>
 
 </div>
@@ -100,6 +102,8 @@ window.addEventListener("beforeunload", () => {
 });
 
 </script>
+
+<script src="/js/sidebar.js"></script>
 
 </body>
 </html>

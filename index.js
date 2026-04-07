@@ -748,12 +748,11 @@ app.get('/pending-analysis', async (req, res) => {
 
   try {
     const result = await pool.query(`
-      SELECT * FROM changeovers
-      WHERE status='closed'
-      AND (ramp_up_days IS NULL OR ramp_up_days = 0)
-      ORDER BY id DESC
-    `);
-
+  SELECT * FROM changeovers
+  WHERE status = 'closed'
+  AND (ramp_up_days IS NULL OR ramp_up_days = '')
+  ORDER BY id DESC
+`);
     const rows = result.rows;
 
     res.render('pending-analysis', {

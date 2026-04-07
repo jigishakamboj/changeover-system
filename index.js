@@ -574,12 +574,11 @@ app.get('/active-changeover/:id', async (req, res) => {
     }
 
 });
+// =====================
+// POST CHANGEOVER PAGE
+// =====================
 
-    // =====================
-    // POST CHANGEOVER PAGE
-    // =====================
-
- app.get('/post-changeover/:id', async (req, res) => {
+app.get('/post-changeover/:id', async (req, res) => {
 
   const id = req.params.id;
 
@@ -591,11 +590,17 @@ app.get('/active-changeover/:id', async (req, res) => {
 
     const row = result.rows[0];
 
+    // 🔥 CRITICAL FIX
+    if (!row) {
+      console.log("❌ No changeover found for ID:", id);
+      return res.send("No changeover found for ID: " + id);
+    }
+
     res.render('post-changeover', { changeover: row });
 
   } catch (err) {
-    console.log(err);
-    res.redirect('/dashboard');
+    console.log("❌ GET POST CHANGEOVER ERROR:", err);
+    res.send(err.message); // 👈 SHOW REAL ERROR
   }
 
 });

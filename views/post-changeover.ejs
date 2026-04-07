@@ -42,14 +42,17 @@ Post Changeover Analysis
 
 <div class="main-content">
 
+<% if(changeover){ %>
+
 <div class="card">
 
 <h2>
 <%= changeover.from_style %> → <%= changeover.to_style %>
 </h2>
 
+
 <p>Line: <%= changeover.line %></p>
-<p>Changeover Duration: <%= changeover.duration_minutes %> minutes</p>
+<p>Changeover Duration: <%= changeover.final_minutes %> minutes</p>
 
 <form action="/post-changeover/<%= changeover.id %>" method="POST">
 
@@ -61,6 +64,10 @@ Post Changeover Analysis
 <label>Ramp Up Days</label>
 <input type="number" name="ramp_up_days" required>
 </div>
+
+<% } else { %>
+  <p>Changeover not found.</p>
+<% } %>
 
 <div class="form-group">
 <label>Ramp-Up Loss (pcs)</label>

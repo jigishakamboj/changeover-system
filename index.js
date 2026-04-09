@@ -403,6 +403,17 @@ const performanceStatus = closed.length > 0
     : "🔴 Needs Improvement"
     : "-";
 
+
+
+const pendingResult = await pool.query(`
+  SELECT COUNT(*) FROM changeovers
+  WHERE status = 'closed'
+  AND ramp_up_days IS NULL
+`);
+
+const pendingCount = parseInt(pendingResult.rows[0].count);
+
+
 // =======================
 // RENDER
 // =======================
@@ -425,7 +436,8 @@ res.render('dashboard',{
     improvement,
     preLoss,
     postLoss,
-    lossImprovement
+    lossImprovement,
+    pendingCount
 });
 
 } catch(err){

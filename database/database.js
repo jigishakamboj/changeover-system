@@ -7,7 +7,7 @@ const path = require('path');
 // =====================
 
 const pool = new Pool({
-  connectionString: "postgresql://changeover_user:gLZh8uTF9KKNEJsgL7Seygm1VhzveguR@dpg-d71p8u5m5p6s739unof0-a.oregon-postgres.render.com/changeover",
+  connectionString: "postgresql://changeover_6xvg_user:7nPy8Oq59sjWvyEqWoPlxgCYvGYIyJSU@dpg-d7tek150lvsc7395ljdg-a.oregon-postgres.render.com/changeover_6xvg",
   ssl: { rejectUnauthorized: false }
 });
 

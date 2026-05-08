@@ -52,13 +52,23 @@ Post Changeover Analysis
 
 <h1 id="timer">00:00:00</h1>
 
-<form action="/stop/<%= changeover.id %>" method="POST" onsubmit="return true;">
-<div style="margin-top:20px;">
-  <button type="submit" class="danger-btn">
-    Stop Changeover
-  </button>
-</div>
+<div class="action-buttons">
+
+<form action="/stop/<%= changeover.id %>" method="POST">
+<button type="submit" class="btn stop-btn">
+  ⛔ Stop
+</button>
 </form>
+
+<button id="pauseBtn" class="btn pause-btn">
+  ⏸ Pause
+</button>
+
+<button id="resumeBtn" class="btn resume-btn" disabled>
+  ▶ Resume
+</button>
+
+</div>
 
 </div>
 
@@ -66,22 +76,26 @@ Post Changeover Analysis
 
 <script>
 
-// ===============================
-// FINAL STABLE TIMER (NO NaN EVER)
-// ===============================
+// ===================
+// FINAL STABLE TIMER 
+// ===================
 
 let startTime = <%= new Date(changeover.start_time).getTime() %>;
 
-// ✅ IMPORTANT: handle invalid data
+let paused = false;
+let pauseStart = 0;
+let totalPausedTime = 0;
+
 if (isNaN(startTime)) {
-    console.log("⚠️ Invalid start_time:", "<%= changeover.start_time %>");
     startTime = Date.now();
 }
 
 function updateTimer(){
 
+    if (paused) return;
+
     const now = Date.now();
-    const diff = Math.floor((now - startTime) / 1000);
+    const diff = Math.floor((now - startTime - totalPausedTime) / 1000);
 
     const hours = Math.floor(diff / 3600);
     const minutes = Math.floor((diff % 3600) / 60);
@@ -93,13 +107,26 @@ function updateTimer(){
         String(seconds).padStart(2,'0');
 }
 
-updateTimer();
+// Pause
+document.getElementById("pauseBtn").addEventListener("click", () => {
+    paused = true;
+    pauseStart = Date.now();
 
-const timerInterval = setInterval(updateTimer, 1000);
-
-window.addEventListener("beforeunload", () => {
-    clearInterval(timerInterval);
+    document.getElementById("pauseBtn").disabled = true;
+    document.getElementById("resumeBtn").disabled = false;
 });
+
+// Resume
+document.getElementById("resumeBtn").addEventListener("click", () => {
+    paused = false;
+    totalPausedTime += Date.now() - pauseStart;
+
+    document.getElementById("pauseBtn").disabled = false;
+    document.getElementById("resumeBtn").disabled = true;
+});
+
+updateTimer();
+setInterval(updateTimer, 1000);
 
 </script>
 
